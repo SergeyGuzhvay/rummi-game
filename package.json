@@ -1,0 +1,9 @@
+{
+  "name": "Rummi",
+  "version": "1.0.0",
+  "description": "Rummikub game server",
+  "dependencies": {
+    "express": "latest",
+    "socket.io": "latest"
+  }
+}

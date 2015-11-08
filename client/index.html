@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Rummi game</title>
+	<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+	<script type="text/javascript" src="js/fabric.min.js"></script>
+	<script type="text/javascript" src="js/rummi-canvas.js"></script>
+	<script type="text/javascript" src="js/rummi-controller.js"></script>
+	<style>
+		#canvas {
+			border: 1px solid black;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="canvas" width="900" height="600"></canvas>
+	<br>
+	<button id="create-el">Create</button>
+	<button id="join-el">Join</button>
+	<button id="start-el">Start</button>
+	<span id="players-el">0</span>/4
+</body>
+</html>
