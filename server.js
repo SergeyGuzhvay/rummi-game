@@ -60,21 +60,24 @@ io.sockets.on('connection', function (client) {
     });
     client.on('start', function () {
         //if (room.players.length < 2) return;
-        client.emit('game started', {
+        io.sockets.in(roomId).emit('game started');
+        console.log(room.players[client.playerIndex].name + ' started the game');
+    });
+    client.on('get data on start', function () {
+        client.emit('start data', {
             playerIndex: client.playerIndex,
             players: room.players,
             playerTiles: rummi.dealtTiles()
         });
-        console.log(room.players[client.playerIndex].name + ' started the game');
+        client.on('move tile', function (tile) {
+            client.broadcast.to(roomId).emit('move tile', tile);
+        });
+        client.on('get extra tile', function () {
+            client.emit('extra tile', rummi.getExtraTile());
+        });
+        client.on('round ended', function () {});
+        client.on('round data', function (data) {});
     });
-    client.on('move tile', function (data) {
-        client.broadcast.to(roomId).emit('tile moved', data);
-    });
-    client.on('get extra tile', function () {
-        client.emit('extra tile', rummi.getNewTile());
-    });
-    client.on('round ended', function () {});
-    client.on('round data', function (data) {});
     client.on('leave', function () {});
     client.on('disconnect', function () {});
 });

@@ -3,9 +3,9 @@ module.exports = {
         this.id = id;
         this.color = color;
         this.number = number;
-        this.location = '';
-        this.row = 0;
-        this.col = 0;
+        //this.location = '';
+        //this.row = 0;
+        //this.col = 0;
     },
     tilesBank: [],
     createTilesBank: function () {
@@ -23,7 +23,7 @@ module.exports = {
         // jokers 
         tiles.push(
             new this.Tile(++id, 0, 0),
-            new this.Tile(++id, 1, 0)
+            new this.Tile(++id, 2, 0)
         );
         this.tilesBank = tiles;
     },  
@@ -45,9 +45,9 @@ module.exports = {
         }
     },
     dealtTiles: function () {
-        return this.tilesBank.splice(0, 14);
+        return this.tilesBank.splice(0, 28);
     },
-    getNewTile: function () {
+    getExtraTile: function () {
         return this.tilesBank.splice(0, 1)[0];
     },
     getTile: function (id) {
