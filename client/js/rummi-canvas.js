@@ -11,10 +11,24 @@ var config = {
 var desk;
 
 window.addEventListener('load', function () {
-    var canvas = new fabric.Canvas('canvas', {
+    var tooltip = document.getElementById('rummiTooltip');
+    var canvas = new fabric.Canvas('mainCanvas', {
         backgroundColor: '#CACACB',
         renderOnAddRemove: false
     });
+    //var timerWrap = document.getElementById('timerWrap');
+    //timerWrap.style.position = 'absolute';
+    //timerWrap.style.border = '1px solid black';
+    //timerWrap.style.top = 0;
+
+
+    //var timer = new fabric.Canvas('timerCanvas', {
+    //    backgroundColor: '#CACACB',
+    //    renderOnAddRemove: false,
+    //    width: 220,
+    //    height: 137
+    //});
+    //timer.style.position = 'absolute';
     //var margin = {
     //    left: (canvas.width - (config.cols * config.cellSize)) / 2,
     //    top: (canvas.height - (config.rows * config.cellSize)) / 2
@@ -25,6 +39,9 @@ window.addEventListener('load', function () {
     fabric.Group.prototype.hasControls = false;
     fabric.Text.prototype.fontFamily = 'Arial';
     fabric.Text.prototype.fontWeight = 'bold';
+    fabric.Circle.prototype.setEndAngle = function (angle) {
+        this.endAngle = Math.PI / 180 * angle;
+    };
     fabric.Object.prototype.savePosition = function () {
         this._savedPosition = {
             top: this.getTop(),
@@ -56,6 +73,37 @@ window.addEventListener('load', function () {
     fabric.Object.prototype.getInnerHeight = function () {
         return this.stroke ? this.height - this.strokeWidth : this.height;
     };
+    // timer
+    var tCircle = new fabric.Circle({
+        originX: 'center',
+        originY: 'center',
+        radius: 50,
+        top: 70,
+        left: 110,
+        angle: -90,
+        startAngle: 0,
+        stroke: 'red',
+        strokeWidth: 7,
+        fill: '',
+        selectable: false
+    });
+    var tText = new fabric.Text('60 secs', {
+        originX: 'center',
+        originY: 'center',
+        top: 70,
+        left: 110,
+        fontSize: 16,
+        fill: 'black',
+        selectable: false
+    });
+    //var tGroup = new fabric.Group([tCircle, tText]);
+
+    //timer.add(tGroup);
+    canvas.add(tCircle, tText);
+    //tCircle.center();
+    //tText.center();
+    //tGroup.centerV();
+    //tGroup.centerH();
 
     // desk
     var deskRect = new fabric.Rect({
@@ -270,14 +318,36 @@ window.addEventListener('load', function () {
         //rummi.cancelDesk();
     };
     acceptDeskBtn.action = function () {
-        rummi.checkDesk();
+        console.log(rummi.checkDesk());
     };
+
+    sortByColorBtn.tooltip = 'Sort your tiles by color';
+    sortByNumberBtn.tooltip = 'Sort your tiles by numbers';
+    extraTileBtn.tooltip = 'Get extra tile and skip your turn';
+    cancelDeskBtn.tooltip = 'Revert desk changes';
+    acceptDeskBtn.tooltip = 'End your turn';
     
     canvas.add(sortByColorBtn, sortByNumberBtn, extraTileBtn, cancelDeskBtn, acceptDeskBtn);
 
     //TODO: цвет кнопок не меняется перед началом игры
     // canvas events
+    var tooltipTimeout = 0;
     canvas.on({
+        'mouse:move': function (e) {
+            // tooltip
+            clearTimeout(tooltipTimeout);
+            tooltip.style.display = 'none';
+            if (!e.target || e.target.type !== 'button') return;
+            tooltipTimeout = setTimeout(function () {
+                var x = e.e.clientX,
+                    y = e.e.clientY;
+                tooltip.innerHTML = e.target.tooltip;
+                tooltip.style.top = (y - 30) + 'px';
+                tooltip.style.left = (x + 10) + 'px';
+                tooltip.style.display = 'block';
+            }, 500);
+
+        },
         'mouse:down': function (e) {
             var el = e.target;
             if (!el) return;
@@ -379,6 +449,112 @@ window.addEventListener('load', function () {
     });
 
     desk = {
+        tInterval: 0,
+        players: 0,
+        mText: new fabric.Text('Player 2 turn', {
+            originY: 'center',
+            top: 50,
+            left: 650,
+            fontSize: 16,
+            fill: 'black',
+            selectable: false
+        }),
+        startTimer: function () {
+            clearInterval(this.tInterval);
+            //var angle = 360;
+            var secondsAngle = 360 / 60;
+            var seconds = 4;
+            this.tInterval = setInterval(function () {
+                //angle -= secondsAngle;
+                tCircle.setEndAngle(secondsAngle * seconds);
+                if (seconds === 1)
+                    tText.text = '1 sec';
+                else if (seconds === 0) {
+                    seconds = 60;
+                    tCircle.setEndAngle(secondsAngle * seconds);
+                    tText.text = 'Time out';
+                    clearInterval(desk.tInterval);
+                }
+                else
+                    tText.text = seconds + ' secs';
+                canvas.renderAll();
+                seconds--;
+            }, 1000);
+        },
+        drawPlayers: function (players) {
+            players.push(players[0]);
+            players.push(players[0]);
+            players.push(players[0]);
+            players.forEach(function (player, i) {
+                var shift = i * 100;
+                var name = new fabric.Text(player.name, {
+                    fontSize: 14,
+                    //fontWeight: 'bold',
+                    fill: 'black',
+                    top: 110,
+                    left: 220 + shift,
+                    selectable: false
+                });
+                fabric.Image.fromURL(player.avatar, function (img) {
+                    img.set({
+                        originX: 'center',
+                        originY: 'center',
+                        width: 60,
+                        height: 60,
+                        top: 70,
+                        left: 250 + shift,
+                        shadow: 'rgba(0,0,0,0.3) 5px 5px 5px',
+                        selectable: false
+                    });
+                    if (rummi.playerIndex === i) {
+                        img.set({
+                            stroke: '#4CD146',
+                            strokeWidth: 2
+                        });
+                    }
+                    //pText.set({
+                    //    originX: 'center',
+                    //    originY: 'center',
+                    //    top: img.getTop() + img.getHeight(),
+                    //    left: img.getLeft()
+                    //});
+                    canvas.add(img);
+                    canvas.renderAll();
+                });
+                desk.drawTileNumbers(player, i);
+                canvas.add(name);
+            });
+            canvas.renderAll();
+        },
+        drawTileNumbers: function (player, index) {
+            var shift = index * 100;
+            var tRect = new fabric.Rect({
+                originX: 'center',
+                originY: 'center',
+                width: 30,
+                height: 22,
+                top: 20,
+                left: 250 + shift,
+                fill: 'white',
+                stroke: 'black',
+                //strokeWidth: 2,
+                rx: 5,
+                ry: 5,
+                selectable: false
+            });
+            var tNumber =  new fabric.Text(String(player.tilesNumber), {
+                originX: 'center',
+                originY: 'center',
+                fontSize: 12,
+                //fontWeight: 'bold',
+                fill: 'black',
+                top: 22,
+                left: 250 + shift,
+                selectable: false
+            });
+            canvas.add(tRect, tNumber);
+            canvas.renderAll();
+        },
         drawTile: function (tile) {
             //tile.location = location;
             //tile.row = row;
@@ -431,12 +607,10 @@ window.addEventListener('load', function () {
         },
         drawRack: function (rack) {
             desk.clearRack();
-            for (var row in rack) {
-                for (var col in rack[row]) {
-                    var tile = rack[row][col];
+            for (var n in rack) {
+                var tile = rack[n];
                     if (tile)
                         desk.drawTile(tile);
-                }
             }
             canvas.renderAll();
         },
@@ -494,6 +668,7 @@ window.addEventListener('load', function () {
         removeTile: function (id) {
             var obj = this.getTileById(id);
             canvas.remove(obj);
+            canvas.renderAll();
         },
         showInvalidSet: function (set) {
             var firstTile = this.getTileById(set[0].id);
@@ -528,10 +703,40 @@ window.addEventListener('load', function () {
             //rummi.moveTile(row, col, location, id);
         //}
     };
+
+    //desk.mText.text = 'test message';
+    //desk.mText.set('fontSize', 14);
+    var mText = desk.mText.text;
+    var points = ['', '.', '..', '...'];
+    var cnt = 0;
+    //desk.mText.text = '';
+    setInterval(function () {
+        if (!desk.mText.text) return;
+        cnt = cnt > 3 ? 0 : cnt;
+        desk.mText.text = mText + points[cnt];
+        canvas.renderAll();
+        cnt++;
+    }, 500);
+    //var textAnimation = function () {
+    //    desk.mText.animate('angle', 45, {
+    //        //duration: 1000,
+    //        onChange: canvas.renderAll.bind(canvas),
+    //        onComplete: function () {
+    //            desk.mText.animate('angle', -45, {
+    //                duration: 1000,
+    //                onChange: canvas.renderAll.bind(canvas),
+    //                onComplete: textAnimation
+    //            });
+    //        }
+    //    });
+    //};
+    //textAnimation();
+
+    canvas.add(desk.mText);
     canvas.renderAll();
 
-
     window.addEventListener('keydown', function (e) {
+        if (e.keyCode === 83) desk.startTimer();
         if (e.keyCode !== 32) return;
         console.log(canvas.getActiveObject());
     });

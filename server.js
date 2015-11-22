@@ -11,23 +11,23 @@ console.log('Server running on port ' + port);
 var players = [
     {
         id: 1,
-        name: 'John',
-        avatar: ''
+        name: 'Player 1',
+        avatar: '/images/avatar1.jpg'
     },
     {
         id: 2,
-        name: 'Mike',
-        avatar: ''
+        name: 'Player 2',
+        avatar: '/images/avatar2.jpg'
     },
     {
         id: 3,
-        name: 'Sam',
-        avatar: ''
+        name: 'Player 3',
+        avatar: '/images/avatar3.jpg'
     },
     {
         id: 4,
-        name: 'Bill',
-        avatar: ''
+        name: 'Player 4',
+        avatar: '/images/avatar4.jpg'
     }
 ];
 var roomId = 1;
@@ -64,10 +64,12 @@ io.sockets.on('connection', function (client) {
         console.log(room.players[client.playerIndex].name + ' started the game');
     });
     client.on('get data on start', function () {
+        var playerTiles = rummi.dealtTiles();
+        room.players[client.playerIndex].tilesNumber = playerTiles.length;
         client.emit('start data', {
             playerIndex: client.playerIndex,
             players: room.players,
-            playerTiles: rummi.dealtTiles()
+            playerTiles: playerTiles
         });
         client.on('move tile', function (tile) {
             client.broadcast.to(roomId).emit('move tile', tile);
@@ -75,7 +77,9 @@ io.sockets.on('connection', function (client) {
         client.on('get extra tile', function () {
             client.emit('extra tile', rummi.getExtraTile());
         });
-        client.on('round ended', function () {});
+        client.on('turn ended', function () {
+
+        });
         client.on('round data', function (data) {});
     });
     client.on('leave', function () {});

@@ -8,13 +8,21 @@
 	<script type="text/javascript" src="js/rummi-canvas.js"></script>
 	<script type="text/javascript" src="js/rummi-controller.js"></script>
 	<style>
-		#canvas {
-			border: 1px solid black;
+		#rummiTooltip {
+			background-color: black;
+			padding: 5px 10px;
+			color: white;
+			border-radius: 5px;
+			position: fixed;
+			display: none;
 		}
 	</style>
 </head>
 <body>
-	<canvas id="canvas" width="900" height="600"></canvas>
+	<div style="position: relative">
+		<canvas id="mainCanvas" width="900" height="600" style="border: 1px solid black"></canvas>
+	</div>
+	<div id="rummiTooltip"></div>
 	<br>
 	<button id="create-el">Create</button>
 	<button id="join-el">Join</button>
