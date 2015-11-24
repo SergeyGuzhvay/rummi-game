@@ -5,7 +5,8 @@ var config = {
     rackCols: 14,
     rackRows: 2,
     borderWidth: 3,
-    colors: ['#000001', '#0000FE', '#FD0001', '#00FD01']
+    colors: ['#000001', '#0000FE', '#FD0001', '#00FD01'],
+    turnTimer: 3
 };
 
 var desk;
@@ -16,6 +17,18 @@ window.addEventListener('load', function () {
         backgroundColor: '#CACACB',
         renderOnAddRemove: false
     });
+    var joker = new Image();
+    joker.src =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAACjElEQVR42u1YO0sDQRD21YmIVmqh/gCx10bTCFp' +
+        'Z+AB/gYgE7MULCP6BWKWUiJAmYLBJk0rwH4iIjVXgSEgwl5BcHs4HGxjOe+zd7UUPXFhy3Hw782VmZ3Zux8b+xy+OVqu12u12D3u93iXNDM2s' +
+        'mHi+hAyYkRMzTXOXCNzR/Bx4DGCAxZrIiZFHDsjYix2Rfr9Pot4XJp4dyL5Ah3JijUZjgYzmLYRMMlggg0nyzjaFcqVer89j4hnvIAMGWMvaP' +
+        'HSqCucWKawwLzRopprN5rKsDmCxBmsZyQp0hw3pniVED4ZhLAbVh7XQwXXCRiBlnU5n06IoqXAvJ7lu2PKloFqtzlIIDEbuOIKEO2bhNmBTej' +
+        'GFocjInUdYFc7Z9inKJsUOzza3rPbKRhkcrw6wLeO9V0GuXS6Xp63yXC43SbJ39ife8S4oDjZgS3jx1ct7Cebya4ew7FsLMN4FxQmnXDMvJty' +
+        '8lx0WYadNS5gbmxPiJiiOJaUpMFlbcpqmTZBQF6CCy59QTlDgCwKjU71c+gFot9vrLBRnLpmnPMQCf8ZwR3aAE1Y4N5wUqU4SdjBsME+n7Fys' +
+        'CUV9r3NWZZnh5zVsC4IZO4K3w2agVqvNjbrHhM1hM0G/97EkeCUb4iiGZ4jdkqRUKk1hj6Kgir4uzIQODTp9JYlHmRmnRW8DRQO6oNNXmfEq1' +
+        'PQH1lQRhC7fhVrmqCN5WoH30oGOOtlmgd4/hyD3HKpZkGm3xH58CkDuybrvfLdbsg2r2NQXJC97EQMGWCc9vhtWPy2/ruszJD8l/CMZ+mAf7n' +
+        'h+hAwYpS1/mI8mnAayp1Coj6Y//9kZiw/3KK4++LZRcvURi8ujWFy/xeYCMzZXwP+DjW8hYJx4WsAUhwAAAABJRU5ErkJggg==';
+
     //var timerWrap = document.getElementById('timerWrap');
     //timerWrap.style.position = 'absolute';
     //timerWrap.style.border = '1px solid black';
@@ -87,7 +100,7 @@ window.addEventListener('load', function () {
         fill: '',
         selectable: false
     });
-    var tText = new fabric.Text('60 secs', {
+    var tText = new fabric.Text(config.turnTimer + ' secs', {
         originX: 'center',
         originY: 'center',
         top: 70,
@@ -96,10 +109,12 @@ window.addEventListener('load', function () {
         fill: 'black',
         selectable: false
     });
-    //var tGroup = new fabric.Group([tCircle, tText]);
+    var timer = new fabric.Group([tCircle, tText], {
+        type: 'timer'
+    });
+    canvas.add(timer);
 
     //timer.add(tGroup);
-    canvas.add(tCircle, tText);
     //tCircle.center();
     //tText.center();
     //tGroup.centerV();
@@ -312,13 +327,17 @@ window.addEventListener('load', function () {
         desk.drawRack(rummi[2]);
     };
     extraTileBtn.action = function () {
+        rummi.load();
         rummi.getExtraTile();
+        rummi.endTurn();
     };
     cancelDeskBtn.action = function () {
-        //rummi.cancelDesk();
+        rummi.load();
     };
     acceptDeskBtn.action = function () {
-        console.log(rummi.checkDesk());
+        if (rummi.checkDesk()) {
+            rummi.endTurn();
+        }
     };
 
     sortByColorBtn.tooltip = 'Sort your tiles by color';
@@ -448,22 +467,25 @@ window.addEventListener('load', function () {
         }
     });
 
+    //var blackJoker = fabric.Image.fromURL('/images')
+
     desk = {
         tInterval: 0,
-        players: 0,
-        mText: new fabric.Text('Player 2 turn', {
-            originY: 'center',
-            top: 50,
-            left: 650,
-            fontSize: 16,
-            fill: 'black',
-            selectable: false
-        }),
+        players: [],
+        //mText: new fabric.Text('Player 2 turn', {
+        //    originY: 'center',
+        //    top: 50,
+        //    left: 650,
+        //    fontSize: 16,
+        //    fill: 'black',
+        //    selectable: false
+        //}),
         startTimer: function () {
+            console.log(rummi.isMyTurn());
             clearInterval(this.tInterval);
             //var angle = 360;
-            var secondsAngle = 360 / 60;
-            var seconds = 4;
+            var secondsAngle = 360 / config.turnTimer;
+            var seconds = config.turnTimer;
             this.tInterval = setInterval(function () {
                 //angle -= secondsAngle;
                 tCircle.setEndAngle(secondsAngle * seconds);
@@ -474,6 +496,25 @@ window.addEventListener('load', function () {
                     tCircle.setEndAngle(secondsAngle * seconds);
                     tText.text = 'Time out';
                     clearInterval(desk.tInterval);
+                    if (!rummi.isMyTurn()) return;
+                    if (rummi.checkDesk()) {
+                        if (rummi.savedTilesNumber === rummi.getTilesNumber()) {
+                            console.log('FAIL1');
+                            rummi.getExtraTile(3);
+                        }
+                    }
+                    else {
+                        rummi.load();
+                        console.log('FAIL2');
+                        rummi.getExtraTile(3);
+                    }
+                    rummi.endTurn();
+                    //if (!(rummi.checkDesk() && rummi.savedTilesNumber === Object.keys(rummi[2]))) {
+                    //    console.log('FAIL');
+                    //    rummi.load();
+                    //    rummi.getExtraTile(3);
+                    //}
+                    //rummi.endTurn();
                 }
                 else
                     tText.text = seconds + ' secs';
@@ -481,13 +522,43 @@ window.addEventListener('load', function () {
                 seconds--;
             }, 1000);
         },
+        stopTimer: function () {
+
+        },
+        set: function (t, values) {
+            switch (t) {
+                case 'activePlayer':
+                    this.players.forEach(function (player, i) {
+                        if (i === values[0]) {
+                            player.avatar.set({
+                                stroke: '#4CD146',
+                                strokeWidth: 2
+                            });
+                        }
+                        else {
+                            player.avatar.set({
+                                stroke: null,
+                                strokeWidth: 1
+                            });
+                        }
+                    });
+                    break;
+                case 'tilesNumber':
+                    console.log('set number');
+                    this.players[values[0]].tilesNumber.text = String(values[1]);
+                    rummi.sendTilesNumber();
+                    break;
+            }
+            //canvas.renderAll();
+        },
         drawPlayers: function (players) {
-            players.push(players[0]);
-            players.push(players[0]);
-            players.push(players[0]);
+            //players.push(players[0]);
+            //players.push(players[0]);
+            //players.push(players[0]);
             players.forEach(function (player, i) {
                 var shift = i * 100;
-                var name = new fabric.Text(player.name, {
+                desk.players[i] = {};
+                desk.players[i].name = new fabric.Text(player.name, {
                     fontSize: 14,
                     //fontWeight: 'bold',
                     fill: 'black',
@@ -495,38 +566,52 @@ window.addEventListener('load', function () {
                     left: 220 + shift,
                     selectable: false
                 });
-                fabric.Image.fromURL(player.avatar, function (img) {
-                    img.set({
-                        originX: 'center',
-                        originY: 'center',
-                        width: 60,
-                        height: 60,
-                        top: 70,
-                        left: 250 + shift,
-                        shadow: 'rgba(0,0,0,0.3) 5px 5px 5px',
-                        selectable: false
-                    });
-                    if (rummi.playerIndex === i) {
-                        img.set({
-                            stroke: '#4CD146',
-                            strokeWidth: 2
-                        });
-                    }
-                    //pText.set({
-                    //    originX: 'center',
-                    //    originY: 'center',
-                    //    top: img.getTop() + img.getHeight(),
-                    //    left: img.getLeft()
-                    //});
-                    canvas.add(img);
-                    canvas.renderAll();
+                desk.players[i].avatar = new fabric.Image();
+                desk.players[i].avatar.set({
+                    originX: 'center',
+                    originY: 'center',
+                    width: 60,
+                    height: 60,
+                    top: 70,
+                    left: 250 + shift,
+                    shadow: 'rgba(0,0,0,0.3) 5px 5px 5px',
+                    selectable: false
                 });
-                desk.drawTileNumbers(player, i);
-                canvas.add(name);
+                canvas.add(desk.players[i].avatar);
+                var img = new Image();
+                img.onload = function () {
+                    desk.players[i].avatar.setElement(img);
+                    canvas.renderAll();
+                };
+                img.src = player.avatar;
+                //fabric.Image.fromURL(player.avatar, function (img) {
+                //    img.set({
+                //        originX: 'center',
+                //        originY: 'center',
+                //        width: 60,
+                //        height: 60,
+                //        top: 70,
+                //        left: 250 + shift,
+                //        shadow: 'rgba(0,0,0,0.3) 5px 5px 5px',
+                //        selectable: false
+                //    });
+                //    //pText.set({
+                //    //    originX: 'center',
+                //    //    originY: 'center',
+                //    //    top: img.getTop() + img.getHeight(),
+                //    //    left: img.getLeft()
+                //    //});
+                //    desk.players[i].avatar = img;
+                //    canvas.add(desk.players[i].avatar);
+                //    canvas.renderAll();
+                //});
+                desk.drawTilesNumber(14, i);
+                canvas.add(desk.players[i].name);
             });
             canvas.renderAll();
         },
-        drawTileNumbers: function (player, index) {
+        //TODO: исправить наложение цифр плиток
+        drawTilesNumber: function (tilesNumber, index) {
             var shift = index * 100;
             var tRect = new fabric.Rect({
                 originX: 'center',
@@ -542,7 +627,7 @@ window.addEventListener('load', function () {
                 ry: 5,
                 selectable: false
             });
-            var tNumber =  new fabric.Text(String(player.tilesNumber), {
+            desk.players[index].tilesNumber = new fabric.Text(String(tilesNumber), {
                 originX: 'center',
                 originY: 'center',
                 fontSize: 12,
@@ -552,7 +637,7 @@ window.addEventListener('load', function () {
                 left: 250 + shift,
                 selectable: false
             });
-            canvas.add(tRect, tNumber);
+            canvas.add(tRect, desk.players[index].tilesNumber);
             canvas.renderAll();
         },
         drawTile: function (tile) {
@@ -575,7 +660,24 @@ window.addEventListener('load', function () {
             });
             text.left = (rect.getInnerWidth() - text.getWidth()) / 2;
             text.top = (rect.getFullHeight() - text.getHeight()) / 2 + 1;
-            var group = new fabric.Group([rect, text], {
+            var group;
+            if (!tile.number) {
+                var img = new fabric.Image(joker, {
+                    originX: 'center',
+                    originY: 'center',
+                    width: rect.getWidth() * 0.8,
+                    height: rect.getHeight() * 0.8,
+                    //width: 28,
+                    //height: 28,
+                    left: rect.getWidth() / 2,
+                    top: rect.getHeight() / 2
+                });
+                group = new fabric.Group([rect, img]);
+            }
+            else{
+                group = new fabric.Group([rect, text]);
+            }
+            group.set({
                 top: top + config.cellSize * tile.row + (config.cellSize - rect.getInnerWidth()) / 2,
                 left: left + config.cellSize * tile.col + (config.cellSize - rect.getInnerWidth()) / 2,
                 borderColor: 'yellow',
@@ -605,12 +707,27 @@ window.addEventListener('load', function () {
             obj.setCoords();
             //}
         },
+        drawDesk: function (desk) {
+            this.clearDesk();
+            for (var n in desk) {
+                var tile = desk[n];
+                if (tile)
+                    this.drawTile(tile);
+            }
+            canvas.renderAll();
+        },
+        clearDesk: function () {
+            canvas.forEachObject(function (obj) {
+                if (obj.tileId && obj.isContainedWithinObject(deskRect))
+                    canvas.remove(obj);
+            });
+        },
         drawRack: function (rack) {
-            desk.clearRack();
+            this.clearRack();
             for (var n in rack) {
                 var tile = rack[n];
                     if (tile)
-                        desk.drawTile(tile);
+                        this.drawTile(tile);
             }
             canvas.renderAll();
         },
@@ -706,38 +823,27 @@ window.addEventListener('load', function () {
 
     //desk.mText.text = 'test message';
     //desk.mText.set('fontSize', 14);
-    var mText = desk.mText.text;
-    var points = ['', '.', '..', '...'];
-    var cnt = 0;
-    //desk.mText.text = '';
-    setInterval(function () {
-        if (!desk.mText.text) return;
-        cnt = cnt > 3 ? 0 : cnt;
-        desk.mText.text = mText + points[cnt];
-        canvas.renderAll();
-        cnt++;
-    }, 500);
-    //var textAnimation = function () {
-    //    desk.mText.animate('angle', 45, {
-    //        //duration: 1000,
-    //        onChange: canvas.renderAll.bind(canvas),
-    //        onComplete: function () {
-    //            desk.mText.animate('angle', -45, {
-    //                duration: 1000,
-    //                onChange: canvas.renderAll.bind(canvas),
-    //                onComplete: textAnimation
-    //            });
-    //        }
-    //    });
-    //};
-    //textAnimation();
+    //var mText = desk.mText.text;
+    //var points = ['', '.', '..', '...'];
+    //var cnt = 0;
+    ////desk.mText.text = '';
+    //setInterval(function () {
+    //    if (!desk.mText.text) return;
+    //    cnt = cnt > 3 ? 0 : cnt;
+    //    desk.mText.text = mText + points[cnt];
+    //    canvas.renderAll();
+    //    cnt++;
+    //}, 500);
 
-    canvas.add(desk.mText);
+    //canvas.add(desk.mText);
     canvas.renderAll();
 
-    window.addEventListener('keydown', function (e) {
-        if (e.keyCode === 83) desk.startTimer();
-        if (e.keyCode !== 32) return;
-        console.log(canvas.getActiveObject());
-    });
+    //window.addEventListener('keydown', function (e) {
+    //    if (e.keyCode === 83) desk.startTimer();
+    //    if (e.keyCode === 38) rummi.save();
+    //    if (e.keyCode === 40) rummi.load();
+    //    if (e.keyCode === 37) desk.clearDesk();
+    //    if (e.keyCode === 39) desk.drawDesk(rummi[1]);
+    //    if (e.keyCode === 32) console.log(rummi.savedTilesNumber);
+    //});
 });

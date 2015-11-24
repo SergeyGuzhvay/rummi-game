@@ -37,51 +37,80 @@ var room = {
 io.sockets.on('connection', function (client) {
     console.log('user connected');
     client.on('create', function () {
-        if (client.playerIndex !== undefined) return;
+        room.gameStarted = false;
+        if (client.index !== undefined) return;
         client.join(roomId);
-        client.playerIndex = 0;
+        client.index = 0;
         room.players = [];
-        room.players.push(players[client.playerIndex]);
+        room.players.push(players[client.index]);
 
         rummi.createTilesBank();
         rummi.shuffleTilesBank();
 
         io.sockets.in(roomId).emit('number of players', room.players.length);
-        console.log(room.players[client.playerIndex].name + ' created the game');
+        console.log(room.players[client.index].name + ' created the game');
     });
     client.on('join', function () {
         if (!room.players.length || room.players.length > 3) return;
-        if (client.playerIndex !== undefined) return;
+        if (client.index !== undefined) return;
+        if (room.gameStarted) return;
         client.join(roomId);
-        client.playerIndex = room.players.length;
-        room.players.push(players[client.playerIndex]);
+        client.index = room.players.length;
+        room.players.push(players[client.index]);
         io.sockets.in(roomId).emit('number of players', room.players.length);
-        console.log(room.players[client.playerIndex].name + ' joined to the game');
+        console.log(room.players[client.index].name + ' joined to the game');
     });
     client.on('start', function () {
+        if (room.gameStarted) return;
         //if (room.players.length < 2) return;
+        room.gameStarted = true;
         io.sockets.in(roomId).emit('game started');
-        console.log(room.players[client.playerIndex].name + ' started the game');
+        console.log(room.players[client.index].name + ' started the game');
     });
     client.on('get data on start', function () {
-        var playerTiles = rummi.dealtTiles();
-        room.players[client.playerIndex].tilesNumber = playerTiles.length;
         client.emit('start data', {
-            playerIndex: client.playerIndex,
+            index: client.index,
             players: room.players,
-            playerTiles: playerTiles
+            playerTiles: rummi.dealtTiles()
         });
+        room.playerTurn = Math.floor(Math.random() * room.players.length);
+        io.sockets.in(roomId).emit('start turn', room.playerTurn);
         client.on('move tile', function (tile) {
             client.broadcast.to(roomId).emit('move tile', tile);
+        });
+        client.on('tiles number changed', function (tilesNumber) {
+            io.sockets.in(roomId).emit('new tiles number', {
+                index: client.index,
+                tilesNumber: tilesNumber
+            });
         });
         client.on('get extra tile', function () {
             client.emit('extra tile', rummi.getExtraTile());
         });
         client.on('turn ended', function () {
-
+            //room.playerTurn++;
+            room.playerTurn = room.playerTurn === (room.players.length - 1) ? 0 : room.playerTurn + 1;
+            //if (room.playerTurn === room.players.length) {
+            //    room.playerTurn = 0;
+            //}
+            io.sockets.in(roomId).emit('start turn', room.playerTurn);
+        });
+        client.on('save desk', function (data) {
+            room.savedData = data;
+        });
+        client.on('load desk', function () {
+            client.emit('saved data', room.savedData);
+            client.broadcast.to(roomId).emit('saved desk', room.savedData[1]);
         });
         client.on('round data', function (data) {});
     });
-    client.on('leave', function () {});
-    client.on('disconnect', function () {});
+    client.on('leave', function () {
+        client.disconnect();
+    });
+    client.on('disconnect', function () {
+        if (client.index) {
+            room.players.splice(client.index, 1);
+        }
+        console.log('user disconnected');
+    });
 });
