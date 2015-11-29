@@ -9,6 +9,8 @@ window.addEventListener('load', function () {
                 socket.emit(el);
             };
         });
+    //var nickname = prompt('Enter your name:');
+    //socket.emit('nickname', nickname);
 
     socket.on('number of players', function (number) {
         playersEl.innerHTML = number;
@@ -34,70 +36,93 @@ window.addEventListener('load', function () {
         rummi.addTileToDesk(tile);
     });
     socket.on('new tiles number', function (data) {
-        desk.drawTilesNumber(data.tilesNumber, data.index);
+        desk.set('tilesNumber', [data.index, data.tilesNumber]);
     });
     socket.on('start turn', function (playerTurn) {
         rummi.playerTurn = playerTurn;
         rummi.startTurn();
         desk.set('activePlayer', [playerTurn]);
     });
-    socket.on('saved data', function (savedData) {
-         rummi[1] = savedData[1];
-        rummi[2] = savedData[2];
-        desk.drawDesk(rummi[1]);
-        desk.drawRack(rummi[2]);
+    socket.on('disconnected user', function (index) {
+        delete rummi.players[index];
+        var cnt = 0;
+        for (var n in rummi.players) {
+            if (rummi.players[n]) cnt++;
+        }
+        if (cnt < 2) {
+            socket.emit('winner');
+        }
     });
-    socket.on('saved desk', function (savedDesk) {
-        rummi[1] = savedDesk;
-        desk.drawDesk(rummi[1]);
+    socket.on('game over', function (index) {
+        alert(rummi.players[index].name + ' has won!');
+        rummi.index = null;
+        rummi.players = [];
+        rummi.player = {};
+        rummi.playerTiles = [];
+        rummi.history = [];
+        rummi[1] = {};
+        rummi[2] = {};
+        desk.clearGameObjects();
     });
+    //socket.on('saved data', function (savedData) {
+    //     rummi[1] = savedData[1];
+    //    rummi[2] = savedData[2];
+    //    desk.drawDesk(rummi[1]);
+    //    desk.drawRack(rummi[2]);
+    //});
+    //socket.on('saved desk', function (savedDesk) {
+    //    rummi[1] = savedDesk;
+    //    desk.drawDesk(rummi[1]);
+    //});
 
     rummi = {
-        logs: {},
         players: [],
         player: {},
         index: null,
         playerTiles: [],
+        history: [],
         // desk array
         1: {},
         // rack array
         2: {},
         savedTilesNumber: 0,
         save: function () {
-            socket.emit('save desk', {
-                1: this[1],
-                2: this[2]
-            });
+            //socket.emit('save desk', {
+            //    1: this[1],
+            //    2: this[2]
+            //});
             this.savedTilesNumber = this.getTilesNumber();
-            //this.savedData = {
-            //    1: {},
-            //    2: {}
-            //};
-            //for (var d in this[1]) {
-            //    this.savedData[1][d] = this[1][d];
-            //}
-            //for (var r in this[2]) {
-            //    this.savedData[2][r] = this[2][r];
-            //}
+            this.history.push([]);
         },
         load: function () {
-            socket.emit('load desk');
+            //desk.removeActives();
+            //socket.emit('load desk');
+            var lastTurn = this.history[this.history.length - 1];
+            for (var i = lastTurn.length; i > 0; i--) {
+                var move = lastTurn[i - 1];
+                if (move.from.location === 2 && move.to.location === 1) {
+                    var tile = this[1][move.id] || this[2][move.id];
+                    delete this[1][move.id];
+                    delete this[2][move.id];
+                    desk.removeTile(move.id);
+                    this.addExtraTile(tile);
+                    socket.emit('move tile', tile);
+                }
+                else if (move.from.location === 1 && move.to.location === 1) {
+                    rummi.moveTile(move.from.row, move.from.col, move.from.location, move.id);
+                    desk.removeTile(move.id);
+                    desk.drawTile(this[move.from.location][move.id], {owner: rummi.index});
+                }
+            }
+            this.history[this.history.length - 1] = [];
             desk.removeInvalidSets();
-            //this[1] = {};
-            //this[2] = {};
-            //for (var d in this.savedData[1]) {
-            //    this[1][d] = this.savedData[1][d];
-            //}
-            //for (var r in this.savedData[2]) {
-            //    this[2][r] = this.savedData[2][r];
-            //}
-
         },
         isMyTurn: function () {
             return this.index === this.playerTurn;
         },
         startTurn: function () {
             desk.startTimer();
+            desk.lockDeskTiles();
             if (this.isMyTurn()) {
                 this.save();
             }
@@ -107,6 +132,9 @@ window.addEventListener('load', function () {
         },
         endTurn: function () {
             socket.emit('turn ended');
+            if (this.getTilesNumber() === 0) {
+                socket.emit('winner');
+            }
         },
         checkDesk: function () {
             var isValid = true;
@@ -134,22 +162,18 @@ window.addEventListener('load', function () {
                         i = sets.length;
                     }
                 });
-                //console.log(sets);
                 for (var n in sets) {
                     var set = sets[n];
                     var isValidRun = true;
                     if (set.length < 3 || set.length > 13) {
-    					//console.log('ERROR0: ' + (n + 1));
                         isValidRun = false;
                     }
                     // runs
                     var firstTile = null;
-                    //console.log(firstTile);
                     for (var j = 1; j < set.length; j++) {
                         var tile = set[j];
                         firstTile = firstTile ? firstTile : set[j - 1];
                         if (set[j - 1].number < j && set[j - 1].number !== 0) {
-    						//console.log('ERROR1: ' + (n + 1));
                             isValidRun = false;
                             break;
                         }
@@ -157,24 +181,17 @@ window.addEventListener('load', function () {
                             continue;
                         }
                         if (tile.number === 13 && j !== set.length - 1) {
-    						//console.log('ERROR2: ' + (n + 1));
                             isValidRun = false;
                             break;
                         }
                         if (!(firstTile.color === tile.color && firstTile.number + j === tile.number)) {
-    						//console.log('ERROR3: ' + (n + 1));
-                            //console.log(firstTile);
-                            //console.log(tile);
-                            //console.log(j);
                             isValidRun = false;
                             break;
-                            //console.log(false);
                         }
                     }
                     var isValidGroup = true;
                     // groups
                     if (set.length > 4) {
-    					//console.log('ERROR5: ' + (n + 1));
                         isValidGroup = false;
                     }
                     var colors = {
@@ -195,7 +212,6 @@ window.addEventListener('load', function () {
                         }
                         number = number ? number : tile.number;
                         if (tile.number !== number) {
-//						console.log('ERROR6: ' + (n + 1));
                             isValidGroup = false;
                         }
                     }
@@ -204,7 +220,6 @@ window.addEventListener('load', function () {
                         if (colors[c] === 1) cnt++;
                     }
                     if (cnt < 3) {
-    					//console.log('ERROR7: ' + (n + 1));
                         isValidGroup = false;
                     }
                     
@@ -223,35 +238,30 @@ window.addEventListener('load', function () {
             if (!this[location][id]) {
                 var oldLocation = location === 1 ? 2 : 1;
                 this[location][id] = this[oldLocation][id];
-                if (oldLocation === 2)
-                    desk.set('tilesNumber', [rummi.index, rummi.getTilesNumber()]);
                 delete this[oldLocation][id];
             }
             var tile = this[location][id];
+            this.history[this.history.length - 1].push({
+                from: {
+                    row: tile.row,
+                    col: tile.col,
+                    location: tile.location
+                },
+                to: {
+                    row: row,
+                    col: col,
+                    location: location
+                },
+                id: id
+            });
             tile.row = row;
             tile.col = col;
             tile.location = location;
             desk.updateTile(tile);
+            desk.set('tilesNumber', [rummi.index, rummi.getTilesNumber()]);
+            rummi.sendTilesNumber();
             socket.emit('move tile', tile);
         },
-        //getTileById: function (id) {
-        //    for (var row in rummi[2]) {
-        //        for (var col in rummi[2][row]) {
-        //            var tile = rummi[2][row][col];
-        //            if (tile.id === id)
-        //               return tile;
-        //        }
-        //    }
-        //    for (var row in rummi[1]) {
-        //        for (var col in rummi[1][row]) {
-        //            var tile = rummi[1][row][col];
-        //            if (tile.id === id)
-        //                return tile;
-        //        }
-        //    }
-        //    console.log('ID NOT FOUND: ' + id);
-        //    console.log(this);
-        //},
         getExtraTile: function (n) {
             n = n ? n : 1;
             for (var i = 0; i < n; i++) {
@@ -259,7 +269,6 @@ window.addEventListener('load', function () {
             }
         },
         addExtraTile: function (extraTile) {
-            //rummi.playerTiles.push(extraTile);
             rowLoop:
             for (var row = 0; row < config.rackRows; row++) {
                 colLoop:
@@ -268,12 +277,6 @@ window.addEventListener('load', function () {
                         var tile = this[2][id];
                         if (tile.col === col && tile.row === row) {
                             continue colLoop;
-                            //extraTile.row = row;
-                            //extraTile.col = col;
-                            //extraTile.location = 2;
-                            //this[2][extraTile.id] = extraTile;
-                            //desk.drawTile(extraTile);
-                            //return;
                         }
                     }
                     extraTile.row = row;
@@ -281,29 +284,20 @@ window.addEventListener('load', function () {
                     extraTile.location = 2;
                     this[2][extraTile.id] = extraTile;
                     desk.set('tilesNumber', [rummi.index, rummi.getTilesNumber()]);
-                    desk.drawTile(extraTile);
+                    rummi.sendTilesNumber();
+                    desk.drawTile(extraTile, {owner: rummi.index});
                     return;
                 }
             }
-            //for (var row in this[2]) {
-            //    for (var col in this[2][row]) {
-            //        var tile = this[2][row][col];
-            //        if (!tile){
-            //            extraTile.row = row;
-            //            extraTile.col = col;
-            //            extraTile.location = 2;
-            //            this[2][row][col] = extraTile;
-            //            desk.drawTile(extraTile);
-            //            return;
-            //        }
-            //    }
-            //}
         },
         addTileToDesk: function (tile) {
             desk.removeTile(tile.id);
-            if (tile.location === 2) return;
+            if (tile.location === 2) {
+                delete rummi[1][tile.id];
+                return;
+            }
             this[1][tile.id] = tile;
-            desk.drawTile(tile);
+            desk.drawTile(tile, {isLocked: true});
         },
         updateRack: function () {
             var row = 0;
@@ -321,7 +315,6 @@ window.addEventListener('load', function () {
                 tile.location = 2;
                 this[2][tile.id] = tile;
                 col++;
-                //console.log(row, col);
             }
         },
         updatePlayerTiles: function () {
@@ -335,7 +328,6 @@ window.addEventListener('load', function () {
                     }
             }
             this.playerTiles = playerTiles;
-            //console.log(playerTiles);
         },
         sortPlayerTilesByColor: function () {
             this.updatePlayerTiles();
@@ -354,5 +346,8 @@ window.addEventListener('load', function () {
             this.updateRack();
         }
     };
+
+    //socket.emit('create');
+    //socket.emit('start');
 
 });

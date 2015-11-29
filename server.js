@@ -31,19 +31,29 @@ var players = [
     }
 ];
 var roomId = 1;
-var room = {
-    players: []
-};
+var room;
 io.sockets.on('connection', function (client) {
     console.log('user connected');
+    client.on('nickname', function (name) {
+        client.name = name;
+    });
     client.on('create', function () {
-        room.gameStarted = false;
         if (client.index !== undefined) return;
+        room = {
+            players: []
+        };
+        room.gameStarted = false;
         client.join(roomId);
         client.index = 0;
         room.players = [];
-        room.players.push(players[client.index]);
-
+        room.players.push({
+            id: players[client.index].id,
+            name: players[client.index].name,
+            avatar: players[client.index].avatar
+        });
+        if (client.name) {
+            room.players[client.index].name = client.name;
+        }
         rummi.createTilesBank();
         rummi.shuffleTilesBank();
 
@@ -56,7 +66,12 @@ io.sockets.on('connection', function (client) {
         if (room.gameStarted) return;
         client.join(roomId);
         client.index = room.players.length;
-        room.players.push(players[client.index]);
+        room.players.push({
+            id: players[client.index].id,
+            name: players[client.index].name,
+            avatar: players[client.index].avatar
+        });
+        if (client.name) room.players[client.index].name = client.name;
         io.sockets.in(roomId).emit('number of players', room.players.length);
         console.log(room.players[client.index].name + ' joined to the game');
     });
@@ -79,7 +94,7 @@ io.sockets.on('connection', function (client) {
             client.broadcast.to(roomId).emit('move tile', tile);
         });
         client.on('tiles number changed', function (tilesNumber) {
-            io.sockets.in(roomId).emit('new tiles number', {
+            client.broadcast.to(roomId).emit('new tiles number', {
                 index: client.index,
                 tilesNumber: tilesNumber
             });
@@ -88,11 +103,7 @@ io.sockets.on('connection', function (client) {
             client.emit('extra tile', rummi.getExtraTile());
         });
         client.on('turn ended', function () {
-            //room.playerTurn++;
             room.playerTurn = room.playerTurn === (room.players.length - 1) ? 0 : room.playerTurn + 1;
-            //if (room.playerTurn === room.players.length) {
-            //    room.playerTurn = 0;
-            //}
             io.sockets.in(roomId).emit('start turn', room.playerTurn);
         });
         client.on('save desk', function (data) {
@@ -102,14 +113,20 @@ io.sockets.on('connection', function (client) {
             client.emit('saved data', room.savedData);
             client.broadcast.to(roomId).emit('saved desk', room.savedData[1]);
         });
-        client.on('round data', function (data) {});
+        client.on('winner', function () {
+            io.sockets.in(roomId).emit('game over', client.index);
+            room.gameStarted = false;
+            client.index = undefined;
+        });
+        //client.on('round data', function (data) {});
     });
     client.on('leave', function () {
         client.disconnect();
     });
     client.on('disconnect', function () {
-        if (client.index) {
-            room.players.splice(client.index, 1);
+        if (client.index !== undefined) {
+            delete room.players[client.index];
+            client.broadcast.to(roomId).emit('disconnected user', client.index);
         }
         console.log('user disconnected');
     });

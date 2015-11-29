@@ -6,14 +6,14 @@ var config = {
     rackRows: 2,
     borderWidth: 3,
     colors: ['#000001', '#0000FE', '#FD0001', '#00FD01'],
-    turnTimer: 3
+    turnTimer: 60
 };
 
 var desk;
 
 window.addEventListener('load', function () {
     var tooltip = document.getElementById('rummiTooltip');
-    var canvas = new fabric.Canvas('mainCanvas', {
+    var canvas = new fabric.Canvas('canvas', {
         backgroundColor: '#CACACB',
         renderOnAddRemove: false
     });
@@ -29,25 +29,6 @@ window.addEventListener('load', function () {
         'PQH1lQRhC7fhVrmqCN5WoH30oGOOtlmgd4/hyD3HKpZkGm3xH58CkDuybrvfLdbsg2r2NQXJC97EQMGWCc9vhtWPy2/ruszJD8l/CMZ+mAf7n' +
         'h+hAwYpS1/mI8mnAayp1Coj6Y//9kZiw/3KK4++LZRcvURi8ujWFy/xeYCMzZXwP+DjW8hYJx4WsAUhwAAAABJRU5ErkJggg==';
 
-    //var timerWrap = document.getElementById('timerWrap');
-    //timerWrap.style.position = 'absolute';
-    //timerWrap.style.border = '1px solid black';
-    //timerWrap.style.top = 0;
-
-
-    //var timer = new fabric.Canvas('timerCanvas', {
-    //    backgroundColor: '#CACACB',
-    //    renderOnAddRemove: false,
-    //    width: 220,
-    //    height: 137
-    //});
-    //timer.style.position = 'absolute';
-    //var margin = {
-    //    left: (canvas.width - (config.cols * config.cellSize)) / 2,
-    //    top: (canvas.height - (config.rows * config.cellSize)) / 2
-    //};
-    //margin.handLeft = (canvas.width - (config.rackCols * config.cellSize)) / 2;
-    //margin.handTop = (margin.top - config.rackRows * config.cellSize) / 2;
     fabric.Rect.prototype.strokeWidth = 0;
     fabric.Group.prototype.hasControls = false;
     fabric.Text.prototype.fontFamily = 'Arial';
@@ -97,8 +78,7 @@ window.addEventListener('load', function () {
         startAngle: 0,
         stroke: 'red',
         strokeWidth: 7,
-        fill: '',
-        selectable: false
+        fill: ''
     });
     var tText = new fabric.Text(config.turnTimer + ' secs', {
         originX: 'center',
@@ -106,19 +86,15 @@ window.addEventListener('load', function () {
         top: 70,
         left: 110,
         fontSize: 16,
-        fill: 'black',
-        selectable: false
+        fill: 'black'
     });
     var timer = new fabric.Group([tCircle, tText], {
-        type: 'timer'
+        type: 'timer',
+        selectable: false,
+        evented: false
     });
     canvas.add(timer);
 
-    //timer.add(tGroup);
-    //tCircle.center();
-    //tText.center();
-    //tGroup.centerV();
-    //tGroup.centerH();
 
     // desk
     var deskRect = new fabric.Rect({
@@ -226,10 +202,7 @@ window.addEventListener('load', function () {
     });
     sortByColorBtn.text = new fabric.Text('123', {
         fontSize: config.cellSize / 1.6,
-        //fontWeight: 'bold',
         fill: config.colors[0]
-        //stroke: 'black',
-        //strokeWidth: 2
     });
     sortByColorBtn.text.left = (sortByColorBtn.rect.getInnerWidth() - sortByColorBtn.text.getWidth()) / 2;
     sortByColorBtn.text.top = (sortByColorBtn.rect.getInnerHeight() - sortByColorBtn.text.getHeight()) / 2 + 2;
@@ -273,10 +246,7 @@ window.addEventListener('load', function () {
     });
     extraTileBtn.text = new fabric.Text('+', {
         fontSize: config.cellSize,
-        //fontWeight: 'bold',
         fill: config.colors[0]
-        //stroke: 'black',
-        //strokeWidth: 2
     });
     extraTileBtn.text.left = (extraTileBtn.rect.getInnerWidth() - extraTileBtn.text.getWidth()) / 2 + 0.5;
     extraTileBtn.text.top = (extraTileBtn.rect.getInnerHeight() - extraTileBtn.text.getHeight()) / 2 + 5.5;
@@ -327,15 +297,19 @@ window.addEventListener('load', function () {
         desk.drawRack(rummi[2]);
     };
     extraTileBtn.action = function () {
+        if (!rummi.isMyTurn()) return;
         rummi.load();
         rummi.getExtraTile();
         rummi.endTurn();
     };
     cancelDeskBtn.action = function () {
-        rummi.load();
+        if (rummi.isMyTurn()) {
+            rummi.load();
+        }
     };
     acceptDeskBtn.action = function () {
-        if (rummi.checkDesk()) {
+        if (!rummi.isMyTurn()) return;
+        if (rummi.checkDesk() && rummi.savedTilesNumber !== rummi.getTilesNumber()) {
             rummi.endTurn();
         }
     };
@@ -345,7 +319,7 @@ window.addEventListener('load', function () {
     extraTileBtn.tooltip = 'Get extra tile and skip your turn';
     cancelDeskBtn.tooltip = 'Revert desk changes';
     acceptDeskBtn.tooltip = 'End your turn';
-    
+
     canvas.add(sortByColorBtn, sortByNumberBtn, extraTileBtn, cancelDeskBtn, acceptDeskBtn);
 
     //TODO: цвет кнопок не меняется перед началом игры
@@ -388,12 +362,6 @@ window.addEventListener('load', function () {
         },
         'object:modified': function (e) {
             var el = canvas.getActiveGroup() || e.target;
-            //canvas.forEachObject(function (obj) {
-            //    if (obj === el) return;
-            //    if (el.intersectsWithObject(obj) && obj.tileId) {
-            //        el.restorePosition();
-            //    }
-            //});
             for (var i in canvas._objects) {
                 var obj = canvas._objects[i];
                 if (obj === el) continue;
@@ -402,49 +370,46 @@ window.addEventListener('load', function () {
                     return;
                 }
             }
-            if (!(el.isContainedWithinObject(deskRect) || el.isContainedWithinObject(rackRect))) {
+            if ((!rummi.isMyTurn() && el.isContainedWithinObject(deskRect)) ||
+                (!(el.isContainedWithinObject(deskRect) || el.isContainedWithinObject(rackRect))))
+            {
                 el.restorePosition();
+                return;
+            }
+            if (el._objects[0] instanceof fabric.Group) {
+                var isOwned = true;
+                el._objects.forEach(function (obj) {
+                    if (obj.owner === null) isOwned = false;
+                });
+                if (!isOwned && el.isContainedWithinObject(rackRect)) {
+                    el.restorePosition();
+                    return;
+                }
+                canvas.discardActiveGroup();
+                el._objects.forEach(function (obj) {
+                    var pos = desk.getTilePosition(obj);
+                    rummi.moveTile(pos.row, pos.col, pos.location, obj.tileId);
+                });
             }
             else {
-                //var group = canvas.getActiveGroup();
-                if (el._objects[0] instanceof fabric.Group) {
-                    //var newGroup = new fabric.Group();
-                    //var objects = [];
-                    canvas.discardActiveGroup();
-                    el._objects.forEach(function (obj) {
-                        //objects.push(desk.getTileById(obj.tileId));
-                        obj = desk.getTileById(obj.tileId);
-                        var pos = desk.getTilePosition(obj);
-                        rummi.moveTile(pos.row, pos.col, pos.location, obj.tileId);
-                        //if (i > 0) return;
-                        //console.log(obj.originX, obj.originY);
-                        //console.log(obj);
-                        //var pos = desk.getTilePosition(obj);
-                        //console.log(obj);
-                        //console.log(pos);
-                        //rummi.moveTile(pos.row, pos.col, pos.location, obj.tileId);
-                    });
-                    //objects.forEach(function (obj) {
-                    //    var pos = desk.getTilePosition(obj);
-                    //    rummi.moveTile(pos.row, pos.col, pos.location, obj.tileId);
-                    //    //newGroup.add(obj);
-                    //});
-
-                    //canvas.add(newGroup);
-                    //canvas.setActiveGroup(newGroup);
-                    //canvas.renderAll();
+                var pos = desk.getTilePosition(el);
+                if (el.owner === null && el.isContainedWithinObject(rackRect)) {
+                    el.restorePosition();
+                    return;
                 }
-                else {
-                    var pos = desk.getTilePosition(el);
-                    //console.log(pos);
-                    rummi.moveTile(pos.row, pos.col, pos.location, el.tileId);
-                }
+                rummi.moveTile(pos.row, pos.col, pos.location, el.tileId);
             }
             canvas.renderAll();
         },
         'object:moving': function (e) {
             var el = e.target;
             el.setCoords();
+            if (!el.isContainedWithinObject(deskRect) && el.owner) {
+                el.set({
+                    top: el.getTop(),
+                    left: el.getLeft()
+                });
+            }
             if (el.isContainedWithinObject(deskRect)) {
                 el.set({
                     left: Math.round((el.left - (deskRect.getInnerLeft() + 3.5)) / config.cellSize) * config.cellSize + deskRect.getInnerLeft() + 3.5,
@@ -457,17 +422,15 @@ window.addEventListener('load', function () {
                     top: Math.round((el.top - (rackRect.getInnerTop()) + 3.5) / config.cellSize) * config.cellSize + rackRect.getInnerTop() + 3.5
                 });
             }
-            if (!canvas.getActiveGroup()) el.bringToFront();
             el.setCoords();
             canvas.renderAll();
-            //canvas.add(el);
         },
         'object:selected': function (e) {
+            var obj = e.target;
             desk.removeInvalidSets();
         }
     });
-
-    //var blackJoker = fabric.Image.fromURL('/images')
+    //TODO: запретить двигать плитки в чужой ход
 
     desk = {
         tInterval: 0,
@@ -481,13 +444,10 @@ window.addEventListener('load', function () {
         //    selectable: false
         //}),
         startTimer: function () {
-            console.log(rummi.isMyTurn());
             clearInterval(this.tInterval);
-            //var angle = 360;
             var secondsAngle = 360 / config.turnTimer;
             var seconds = config.turnTimer;
             this.tInterval = setInterval(function () {
-                //angle -= secondsAngle;
                 tCircle.setEndAngle(secondsAngle * seconds);
                 if (seconds === 1)
                     tText.text = '1 sec';
@@ -497,24 +457,17 @@ window.addEventListener('load', function () {
                     tText.text = 'Time out';
                     clearInterval(desk.tInterval);
                     if (!rummi.isMyTurn()) return;
+                    desk.removeActives();
                     if (rummi.checkDesk()) {
                         if (rummi.savedTilesNumber === rummi.getTilesNumber()) {
-                            console.log('FAIL1');
                             rummi.getExtraTile(3);
                         }
                     }
                     else {
                         rummi.load();
-                        console.log('FAIL2');
                         rummi.getExtraTile(3);
                     }
                     rummi.endTurn();
-                    //if (!(rummi.checkDesk() && rummi.savedTilesNumber === Object.keys(rummi[2]))) {
-                    //    console.log('FAIL');
-                    //    rummi.load();
-                    //    rummi.getExtraTile(3);
-                    //}
-                    //rummi.endTurn();
                 }
                 else
                     tText.text = seconds + ' secs';
@@ -523,7 +476,7 @@ window.addEventListener('load', function () {
             }, 1000);
         },
         stopTimer: function () {
-
+            clearInterval(this.tInterval);
         },
         set: function (t, values) {
             switch (t) {
@@ -544,26 +497,21 @@ window.addEventListener('load', function () {
                     });
                     break;
                 case 'tilesNumber':
-                    console.log('set number');
                     this.players[values[0]].tilesNumber.text = String(values[1]);
-                    rummi.sendTilesNumber();
+                    //rummi.sendTilesNumber();
                     break;
             }
-            //canvas.renderAll();
         },
         drawPlayers: function (players) {
-            //players.push(players[0]);
-            //players.push(players[0]);
-            //players.push(players[0]);
             players.forEach(function (player, i) {
                 var shift = i * 100;
                 desk.players[i] = {};
                 desk.players[i].name = new fabric.Text(player.name, {
                     fontSize: 14,
-                    //fontWeight: 'bold',
                     fill: 'black',
                     top: 110,
                     left: 220 + shift,
+                    type: 'player',
                     selectable: false
                 });
                 desk.players[i].avatar = new fabric.Image();
@@ -575,6 +523,7 @@ window.addEventListener('load', function () {
                     top: 70,
                     left: 250 + shift,
                     shadow: 'rgba(0,0,0,0.3) 5px 5px 5px',
+                    type: 'player',
                     selectable: false
                 });
                 canvas.add(desk.players[i].avatar);
@@ -584,27 +533,6 @@ window.addEventListener('load', function () {
                     canvas.renderAll();
                 };
                 img.src = player.avatar;
-                //fabric.Image.fromURL(player.avatar, function (img) {
-                //    img.set({
-                //        originX: 'center',
-                //        originY: 'center',
-                //        width: 60,
-                //        height: 60,
-                //        top: 70,
-                //        left: 250 + shift,
-                //        shadow: 'rgba(0,0,0,0.3) 5px 5px 5px',
-                //        selectable: false
-                //    });
-                //    //pText.set({
-                //    //    originX: 'center',
-                //    //    originY: 'center',
-                //    //    top: img.getTop() + img.getHeight(),
-                //    //    left: img.getLeft()
-                //    //});
-                //    desk.players[i].avatar = img;
-                //    canvas.add(desk.players[i].avatar);
-                //    canvas.renderAll();
-                //});
                 desk.drawTilesNumber(14, i);
                 canvas.add(desk.players[i].name);
             });
@@ -622,28 +550,37 @@ window.addEventListener('load', function () {
                 left: 250 + shift,
                 fill: 'white',
                 stroke: 'black',
-                //strokeWidth: 2,
                 rx: 5,
                 ry: 5,
+                type: 'player',
                 selectable: false
             });
             desk.players[index].tilesNumber = new fabric.Text(String(tilesNumber), {
                 originX: 'center',
                 originY: 'center',
                 fontSize: 12,
-                //fontWeight: 'bold',
                 fill: 'black',
                 top: 22,
                 left: 250 + shift,
+                type: 'player',
                 selectable: false
             });
             canvas.add(tRect, desk.players[index].tilesNumber);
             canvas.renderAll();
         },
-        drawTile: function (tile) {
-            //tile.location = location;
-            //tile.row = row;
-            //tile.col = col;
+        lockDeskTiles: function () {
+            canvas.forEachObject(function (obj) {
+                if (obj.isContainedWithinObject(deskRect) && obj.type === 'tile') {
+                    obj.set({
+                        lockMovementX: !rummi.isMyTurn(),
+                        lockMovementY: !rummi.isMyTurn(),
+                        owner: null
+                    });
+                }
+            });
+        },
+        drawTile: function (tile, options) {
+            if (!options) options = {};
             var top = tile.location === 1 ? deskRect.getInnerTop() : rackRect.getTop();
             var left = tile.location === 1 ? deskRect.getInnerLeft() : rackRect.getLeft();
             var rect = new fabric.Rect({
@@ -656,7 +593,6 @@ window.addEventListener('load', function () {
             var text = new fabric.Text(String(tile.number), {
                 fill: 'white',
                 fontSize: config.cellSize / 2.3
-                //stroke: 'white'
             });
             text.left = (rect.getInnerWidth() - text.getWidth()) / 2;
             text.top = (rect.getFullHeight() - text.getHeight()) / 2 + 1;
@@ -683,29 +619,22 @@ window.addEventListener('load', function () {
                 borderColor: 'yellow',
                 hoverCursor: 'cursor',
                 hasControls: false,
+                lockMovementX: Boolean(options.isLocked),
+                lockMovementY: Boolean(options.isLocked),
                 type: 'tile',
+                owner: options.owner >= 0 ? options.owner : null,
                 tileId: tile.id
             });
             canvas.add(group);
             canvas.renderAll();
         },
         updateTile: function (tile) {
-            //var group = canvas.getActiveGroup();
             var obj = this.getTileById(tile.id);
             var top = tile.location === 1 ? deskRect.getInnerTop() : rackRect.getTop();
             var left = tile.location === 1 ? deskRect.getInnerLeft() : rackRect.getLeft();
-            //if (group) {
-            //    tile = rummi.getTileById(group._objects[0].tileId);
-            //    console.log(tile);
-            //    group.top = top + config.cellSize * tile.row + (config.cellSize - obj._objects[0].getInnerWidth()) / 2;
-            //    group.left = left + config.cellSize * tile.col + (config.cellSize - obj._objects[0].getInnerWidth()) / 2;
-            //    group.setCoords();
-            //}
-            //else {
             obj.top = top + config.cellSize * tile.row + (config.cellSize - obj._objects[0].getInnerWidth()) / 2;
             obj.left = left + config.cellSize * tile.col + (config.cellSize - obj._objects[0].getInnerWidth()) / 2;
             obj.setCoords();
-            //}
         },
         drawDesk: function (desk) {
             this.clearDesk();
@@ -717,6 +646,7 @@ window.addEventListener('load', function () {
             canvas.renderAll();
         },
         clearDesk: function () {
+            canvas.discardActiveGroup();
             canvas.forEachObject(function (obj) {
                 if (obj.tileId && obj.isContainedWithinObject(deskRect))
                     canvas.remove(obj);
@@ -726,8 +656,9 @@ window.addEventListener('load', function () {
             this.clearRack();
             for (var n in rack) {
                 var tile = rack[n];
-                    if (tile)
-                        this.drawTile(tile);
+                    if (tile) {
+                        this.drawTile(tile, {owner: rummi.index});
+                    }
             }
             canvas.renderAll();
         },
@@ -739,23 +670,6 @@ window.addEventListener('load', function () {
         },
         getTilePosition: function (tile) {
             var position = {};
-            //var group = canvas.getActiveGroup();
-            //if (group) {
-            //    if (group.isContainedWithinObject(deskRect)) {
-            //        position.location = 1;
-            //        position.row = Math.floor((group.getTop() + tile.getTop() - deskRect.getInnerTop()) / config.cellSize);
-            //        position.col = Math.floor((group.getLeft() + tile.getLeft() - deskRect.getInnerLeft()) / config.cellSize);
-            //        //position.row = Math.floor((tile._originalTop - deskRect.getInnerTop()) / config.cellSize);
-            //        //position.col = Math.floor((tile._originalLeft - deskRect.getInnerLeft()) / config.cellSize);
-            //
-            //    }
-            //    else if (group.isContainedWithinObject(rackRect)) {
-            //        position.location = 2;
-            //        position.row = Math.floor((group.getTop() + tile.getTop() - rackRect.getTop()) / config.cellSize);
-            //        position.col = Math.floor((group.getLeft() + tile.getLeft() - rackRect.getLeft()) / config.cellSize);
-            //    }
-            //}
-            //else {
                 if (tile.isContainedWithinObject(deskRect)) {
                     position.location = 1;
                     position.row = Math.floor((tile.getTop() - deskRect.getInnerTop()) / config.cellSize);
@@ -770,12 +684,6 @@ window.addEventListener('load', function () {
             return position;
         },
         getTileById: function (id) {
-            //var result;
-            //canvas.forEachObject(function (obj) {
-            //    if (obj.tileId === id)
-            //        result = obj;
-            //});
-            //return result;
             for (var i in canvas._objects) {
                 var obj = canvas._objects[i];
                 if (obj.tileId === id)
@@ -787,15 +695,33 @@ window.addEventListener('load', function () {
             canvas.remove(obj);
             canvas.renderAll();
         },
-        showInvalidSet: function (set) {
-            var firstTile = this.getTileById(set[0].id);
-            if (!firstTile) {
-                console.log('ERROR: "showInvalidSet" firstTile not defined');
-                console.log(set);
+        removeActives: function () {
+            var obj = canvas.getActiveGroup() || canvas.getActiveObject();
+            if (!obj) return;
+            canvas.__onMouseUp(obj);
+            if (obj._objects[0] instanceof fabric.Group) {
+                obj._objects.forEach(function (obj) {
+                    if (!obj._savedPosition) {
+                        return;
+                    }
+                    obj.restorePosition();
+                });
+                console.log('GROUP RESTORED');
             }
+            else {
+                if (!obj._savedPosition) {
+                    return;
+                }
+                obj.restorePosition();
+            }
+            canvas.renderAll();
+        },
+        showInvalidSet: function (set) {
+            var top = deskRect.getInnerTop() + config.cellSize * set[0].row;
+            var left = deskRect.getInnerLeft() + config.cellSize * set[0].col;
             var invalidSet = new fabric.Rect({
-                top: firstTile.getTop() - config.borderWidth,
-                left: firstTile.getLeft() - config.borderWidth,
+                top: top,
+                left: left,
                 width: config.cellSize * set.length - config.borderWidth,
                 height: config.cellSize - config.borderWidth,
                 fill: '',
@@ -813,12 +739,16 @@ window.addEventListener('load', function () {
                     canvas.remove(obj);
                 }
             })
+        },
+        clearGameObjects: function () {
+            desk.stopTimer();
+            canvas.forEachObject(function (obj) {
+                if (obj.type === 'tile' || obj.type === 'player') {
+                    canvas.remove(obj);
+                }
+            });
+            canvas.renderAll();
         }
-        //moveTile: function (row, col, location, id) {
-            //var obj = desk.getTileById(id);
-            //canvas.remove(obj);
-            //rummi.moveTile(row, col, location, id);
-        //}
     };
 
     //desk.mText.text = 'test message';
@@ -834,16 +764,20 @@ window.addEventListener('load', function () {
     //    canvas.renderAll();
     //    cnt++;
     //}, 500);
-
+    //
     //canvas.add(desk.mText);
     canvas.renderAll();
 
-    //window.addEventListener('keydown', function (e) {
-    //    if (e.keyCode === 83) desk.startTimer();
-    //    if (e.keyCode === 38) rummi.save();
-    //    if (e.keyCode === 40) rummi.load();
-    //    if (e.keyCode === 37) desk.clearDesk();
-    //    if (e.keyCode === 39) desk.drawDesk(rummi[1]);
-    //    if (e.keyCode === 32) console.log(rummi.savedTilesNumber);
-    //});
+    window.addEventListener('keydown', function (e) {
+        //if (e.keyCode === 83) desk.startTimer();
+        //if (e.keyCode === 83) canvas.getActiveObject();
+        //if (e.keyCode === 38) rummi.save();
+        //if (e.keyCode === 40) rummi.load();
+        //if (e.keyCode === 37) desk.clearDesk();
+        //if (e.keyCode === 39) desk.drawDesk(rummi[1]);
+        //if (e.keyCode === 32) {
+        //    desk.clearGameObjects();
+            //desk.removeActives();
+        //}
+    });
 });
