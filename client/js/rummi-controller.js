@@ -1,33 +1,16 @@
 var rummi;
 window.addEventListener('load', function () {
-    var socket = io();
-
-    ['create', 'join', 'start', 'players']
-        .forEach(function (el) {
-            window[el + 'El'] = document.getElementById(el + '-el');
-            window[el + 'El'].onclick = function () {
-                socket.emit(el);
-            };
-        });
-    //var nickname = prompt('Enter your name:');
-    //socket.emit('nickname', nickname);
-
-    socket.on('number of players', function (number) {
-        playersEl.innerHTML = number;
-    });
     socket.on('game started', function () {
+        canvasInit();
         socket.emit('get data on start');
     });
-    socket.on('start data', function (data) {
-        rummi.index = data.index;
-        rummi.players = data.players;
-        rummi.player = rummi.players[rummi.index];
-        rummi.playerTiles = data.playerTiles;
+    socket.on('start data', function (tiles) {
+        rummi.playerTiles = tiles;
 
         rummi.updateRack();
         desk.drawRack(rummi[2]);
         desk.drawPlayers(rummi.players);
-        rummi.startTurn();
+        //rummi.startTurn();
     });
     socket.on('extra tile', function (newTile) {
         rummi.addExtraTile(newTile);
@@ -63,6 +46,7 @@ window.addEventListener('load', function () {
         rummi[1] = {};
         rummi[2] = {};
         desk.clearGameObjects();
+        desk.clear();
     });
     //socket.on('saved data', function (savedData) {
     //     rummi[1] = savedData[1];
@@ -81,6 +65,7 @@ window.addEventListener('load', function () {
         index: null,
         playerTiles: [],
         history: [],
+        beep: new Audio('sounds/beep.mp3'),
         // desk array
         1: {},
         // rack array
@@ -123,8 +108,11 @@ window.addEventListener('load', function () {
         startTurn: function () {
             desk.startTimer();
             desk.lockDeskTiles();
+            console.log('turn: ', this.index, this.playerTurn);
             if (this.isMyTurn()) {
                 this.save();
+                this.beep.play();
+                console.log('my turn: ', this.isMyTurn());
             }
         },
         getTilesNumber: function () {
@@ -269,6 +257,7 @@ window.addEventListener('load', function () {
             }
         },
         addExtraTile: function (extraTile) {
+            if (!extraTile) return;
             rowLoop:
             for (var row = 0; row < config.rackRows; row++) {
                 colLoop:
@@ -344,6 +333,21 @@ window.addEventListener('load', function () {
                 return result === 0 ? tile1.color - tile2.color : result;
             });
             this.updateRack();
+        },
+        getRowByTileId: function (id) {
+            var r = this[1][id].row;
+            var row = [];
+            for (var c = 0; c < config.cols; c++) {
+                var item = 0;
+                for (var n in this[1]) {
+                    var tile = this[1][n];
+                    if (tile.row === r && tile.col === c) {
+                        item = tile;
+                    }
+                }
+                row.push(item);
+            }
+            return row;
         }
     };
 

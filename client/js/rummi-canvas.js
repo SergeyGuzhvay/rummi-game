@@ -6,14 +6,15 @@ var config = {
     rackRows: 2,
     borderWidth: 3,
     colors: ['#000001', '#0000FE', '#FD0001', '#00FD01'],
-    turnTimer: 60
+    turnTimer: 5
 };
 
 var desk;
 
-window.addEventListener('load', function () {
-    var tooltip = document.getElementById('rummiTooltip');
-    var canvas = new fabric.Canvas('canvas', {
+//window.addEventListener('load', function () {
+var canvasInit = function () {
+    var tooltip = document.getElementById('rummi-tooltip');
+    var canvas = new fabric.Canvas('rummi-canvas', {
         backgroundColor: '#CACACB',
         renderOnAddRemove: false
     });
@@ -164,7 +165,7 @@ window.addEventListener('load', function () {
             [
                 i * config.cellSize + rackRect.left,
                 rackRect.top,
-                i * config.cellSize + rackRect.left ,
+                i * config.cellSize + rackRect.left,
                 config.cellSize * config.rackRows + rackRect.top
             ],
             {
@@ -371,8 +372,7 @@ window.addEventListener('load', function () {
                 }
             }
             if ((!rummi.isMyTurn() && el.isContainedWithinObject(deskRect)) ||
-                (!(el.isContainedWithinObject(deskRect) || el.isContainedWithinObject(rackRect))))
-            {
+                (!(el.isContainedWithinObject(deskRect) || el.isContainedWithinObject(rackRect)))) {
                 el.restorePosition();
                 return;
             }
@@ -402,27 +402,35 @@ window.addEventListener('load', function () {
             canvas.renderAll();
         },
         'object:moving': function (e) {
-            var el = e.target;
-            el.setCoords();
-            if (!el.isContainedWithinObject(deskRect) && el.owner) {
-                el.set({
-                    top: el.getTop(),
-                    left: el.getLeft()
+            var target = e.target;
+            target.setCoords();
+            //if (!el.isContainedWithinObject(deskRect) && el.owner) {
+            //    el.set({
+            //        top: el.getTop(),
+            //        left: el.getLeft()
+            //    });
+            //}
+            if (target.isContainedWithinObject(deskRect)) {
+                canvas.forEachObject(function (obj) {
+                    if (target === obj) return;
+                    if (target.intersectsWithObject(obj) && obj.type === 'tile') {
+                        //console.log(rummi.getRowByTileId(obj.tileId));
+                    }
+                })
+            }
+            if (target.isContainedWithinObject(deskRect)) {
+                target.set({
+                    left: Math.round((target.left - (deskRect.getInnerLeft() + 3.5)) / config.cellSize) * config.cellSize + deskRect.getInnerLeft() + 3.5,
+                    top: Math.round((target.top - (deskRect.getInnerTop()) + 3.5) / config.cellSize) * config.cellSize + deskRect.getInnerTop() + 3.5
                 });
             }
-            if (el.isContainedWithinObject(deskRect)) {
-                el.set({
-                    left: Math.round((el.left - (deskRect.getInnerLeft() + 3.5)) / config.cellSize) * config.cellSize + deskRect.getInnerLeft() + 3.5,
-                    top: Math.round((el.top - (deskRect.getInnerTop()) + 3.5) / config.cellSize) * config.cellSize + deskRect.getInnerTop() + 3.5
+            else if (target.isContainedWithinObject(rackRect)) {
+                target.set({
+                    left: Math.round((target.left - (rackRect.getInnerLeft() + 3.5)) / config.cellSize) * config.cellSize + rackRect.getInnerLeft() + 3.5,
+                    top: Math.round((target.top - (rackRect.getInnerTop()) + 3.5) / config.cellSize) * config.cellSize + rackRect.getInnerTop() + 3.5
                 });
             }
-            else if (el.isContainedWithinObject(rackRect)) {
-                el.set({
-                    left: Math.round((el.left - (rackRect.getInnerLeft() + 3.5)) / config.cellSize) * config.cellSize + rackRect.getInnerLeft() + 3.5,
-                    top: Math.round((el.top - (rackRect.getInnerTop()) + 3.5) / config.cellSize) * config.cellSize + rackRect.getInnerTop() + 3.5
-                });
-            }
-            el.setCoords();
+            target.setCoords();
             canvas.renderAll();
         },
         'object:selected': function (e) {
@@ -610,7 +618,7 @@ window.addEventListener('load', function () {
                 });
                 group = new fabric.Group([rect, img]);
             }
-            else{
+            else {
                 group = new fabric.Group([rect, text]);
             }
             group.set({
@@ -656,9 +664,9 @@ window.addEventListener('load', function () {
             this.clearRack();
             for (var n in rack) {
                 var tile = rack[n];
-                    if (tile) {
-                        this.drawTile(tile, {owner: rummi.index});
-                    }
+                if (tile) {
+                    this.drawTile(tile, {owner: rummi.index});
+                }
             }
             canvas.renderAll();
         },
@@ -670,16 +678,16 @@ window.addEventListener('load', function () {
         },
         getTilePosition: function (tile) {
             var position = {};
-                if (tile.isContainedWithinObject(deskRect)) {
-                    position.location = 1;
-                    position.row = Math.floor((tile.getTop() - deskRect.getInnerTop()) / config.cellSize);
-                    position.col = Math.floor((tile.getLeft() - deskRect.getInnerLeft()) / config.cellSize);
-                }
-                else if (tile.isContainedWithinObject(rackRect)) {
-                    position.location = 2;
-                    position.row = Math.floor((tile.getTop() - rackRect.getTop()) / config.cellSize);
-                    position.col = Math.floor((tile.getLeft() - rackRect.getLeft()) / config.cellSize);
-                }
+            if (tile.isContainedWithinObject(deskRect)) {
+                position.location = 1;
+                position.row = Math.floor((tile.getTop() - deskRect.getInnerTop()) / config.cellSize);
+                position.col = Math.floor((tile.getLeft() - deskRect.getInnerLeft()) / config.cellSize);
+            }
+            else if (tile.isContainedWithinObject(rackRect)) {
+                position.location = 2;
+                position.row = Math.floor((tile.getTop() - rackRect.getTop()) / config.cellSize);
+                position.col = Math.floor((tile.getLeft() - rackRect.getLeft()) / config.cellSize);
+            }
             //}
             return position;
         },
@@ -706,7 +714,6 @@ window.addEventListener('load', function () {
                     }
                     obj.restorePosition();
                 });
-                console.log('GROUP RESTORED');
             }
             else {
                 if (!obj._savedPosition) {
@@ -748,6 +755,11 @@ window.addEventListener('load', function () {
                 }
             });
             canvas.renderAll();
+        },
+        clear: function () {
+            canvas.dispose();
+            canvas.clear();
+            canvas.clearContext(canvas.getContext());
         }
     };
 
@@ -777,7 +789,8 @@ window.addEventListener('load', function () {
         //if (e.keyCode === 39) desk.drawDesk(rummi[1]);
         //if (e.keyCode === 32) {
         //    desk.clearGameObjects();
-            //desk.removeActives();
+        //desk.removeActives();
         //}
     });
-});
+}
+//});

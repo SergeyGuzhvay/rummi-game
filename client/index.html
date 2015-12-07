@@ -5,10 +5,20 @@
 	<title>Rummi game</title>
 	<script type="text/javascript" src="/socket.io/socket.io.js"></script>
 	<script type="text/javascript" src="js/fabric.min.js"></script>
+	<script type="text/javascript" src="js/jquery.min.js"></script>
+	<!--<script type="text/javascript" src="js/bootstrap.min.js"></script>-->
+	<script type="text/javascript" src="js/lobby-controller.js"></script>
 	<script type="text/javascript" src="js/rummi-canvas.js"></script>
 	<script type="text/javascript" src="js/rummi-controller.js"></script>
+	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
 	<style>
-		#rummiTooltip {
+		body {
+			margin: 8px;
+		}
+		canvas {
+			border: 1px solid black;
+		}
+		#rummi-tooltip {
 			background-color: black;
 			padding: 5px 10px;
 			color: white;
@@ -16,17 +26,217 @@
 			position: fixed;
 			display: none;
 		}
+		#rummi-canvas-wrap {
+			position: relative;
+			display: inline-block;
+			background: url('images/rummikub.png') no-repeat center;
+			background-size: 70%;
+		}
+		#rummi-controls {
+			padding: 10px;
+			display: inline-block;
+			border: 1px solid black;
+			width: 320px;
+			height: 602px;
+			margin-left: 10px;
+			vertical-align: top;
+		}
+		#rummi-controls label {
+			font-weight: normal;
+		}
+		#rummi-controls input {
+			padding-left: 5px;
+		}
+		#rummi-controls input[type="checkbox"] {
+			vertical-align: text-bottom;
+		}
+		#active-games {
+			height: 180px;
+			overflow: auto;
+			border: 1px solid gray;
+			cursor: default;
+		}
+		#logs-div {
+			height: 250px;
+			overflow: auto;
+			border: 1px solid gray;
+			cursor: default;
+			margin-bottom: 20px;
+		}
+		.logs-line {
+			padding: 3px;
+		}
+		.logs-line:nth-of-type(even) {
+			background-color: #efeff0;
+		}
+		/*#logs-div div:nth-of-type(odd) {*/
+			/*background-color: #e8e8e9;*/
+		/*}*/
+		/*#active-games div:last-of-type{*/
+			/*margin-bottom: -1px;*/
+		/*}*/
+		/*.active-game {*/
+			/*padding: 5px 0 5px 10px;*/
+			/*border-bottom: 1px solid black;*/
+		/*}*/
+		/*.active-game:not(.selected):hover {*/
+			/*background-color: #f3f3f4;*/
+		/*}*/
+		#active-games .active td {
+			background-color: #dcdcdd !important;
+		}
+		#create-div, #game-nav {
+			display: none;
+		}
+		#rummi-controls .btn-default:focus {
+			outline: 0 !important;
+		}
+		.tabs {
+			cursor: default;
+		}
+		.notValid {
+			border: 2px solid red;
+		}
+		/*#players-list*/
+		/*#lobby-div {*/
+			/*display: none;*/
+		/*}*/
+		/*#game-nav {*/
+			/*display: block;*/
+		/*}*/
+
 	</style>
 </head>
 <body>
-	<div style="position: relative">
-		<canvas id="canvas" width="900" height="600" style="border: 1px solid black"></canvas>
+	<div id="rummi-canvas-wrap">
+		<canvas id="rummi-canvas" width="900" height="600"></canvas>
 	</div>
-	<div id="rummiTooltip"></div>
-	<br>
-	<button id="create-el">Create</button>
-	<button id="join-el">Join</button>
-	<button id="start-el">Start</button>
-	<span id="players-el">0</span>/4
+	<div id="rummi-controls">
+		<div id="lobby-div">
+			<p>
+				<label for="name-input">Your name</label> <br>
+				<input id="name-input" type="text">
+			</p>
+			<br>
+			<!--<p>-->
+				<!--<button id="create-tab" type="button" class="btn btn-default">Create</button>-->
+				<!--<button id="join-tab" type="button" class="btn btn-default active">Join</button>-->
+			<!--</p>-->
+			<ul class="nav nav-tabs">
+				<li id="create-tab" class="tabs"><a>Create</a></li>
+				<li id="join-tab" class="tabs active"><a>Join</a></li>
+			</ul>
+			<br>
+			<div id="create-div">
+				<p>
+					<label for="game-name-input">Game name</label> <br>
+					<input id="game-name-input" type="text"> <br>
+					<input id="private-checkbox" type="checkbox"> <label for="private-checkbox">private</label>
+				</p>
+				<p id="create-password-wrap" hidden>
+					<label for="create-password-input">Password</label> <br>
+					<input id="create-password-input" type="text"> <br>
+				</p>
+				<button id="create-btn">Create game</button>
+			</div>
+			<div id="join-div">
+				Games
+				<!--<div id="active-games">-->
+					<!--<div class="active-game">Dapibus ac facidivsis in</div>-->
+					<!--<div class="active-game">Cras justo odio</div>-->
+					<!--<div class="active-game">Morbi leo risus</div>-->
+					<!--<div class="active-game">Porta ac consectetur ac</div>-->
+					<!--<div class="active-game">Vestibulum at eros</div>-->
+					<!--<div class="active-game">Dapibus ac facidivsis in</div>-->
+					<!--<div class="active-game">Cras justo odio</div>-->
+					<!--<div class="active-game">Morbi leo risus</div>-->
+					<!--<div class="active-game">Porta ac consectetur ac</div>-->
+					<!--<div class="active-game">Vestibulum at eros</div>-->
+				<!--</div>-->
+				<div id="active-games" >
+					<table class="table table-hover">
+						<!--<thead>-->
+							<!--<tr>-->
+								<!--<th>Players</th>-->
+								<!--<th>Name</th>-->
+								<!--<th>Private</th>-->
+							<!--</tr>-->
+						<!--</thead>-->
+						<tbody id="games-list">
+							<!--<tr class="game-info">-->
+								<!--<td class="col-md-1"><span class="glyphicon glyphicon-lock"></span></td>-->
+								<!--<td class="col-md-2">1/4</td>-->
+								<!--<td class="col-md-9">Dapibus ac facidivsis in</td>-->
+							<!--</tr>-->
+							<!--<tr class="game-info">-->
+								<!--<td class="col-md-1"></span></td>-->
+								<!--<td class="col-md-2">3/4</td>-->
+								<!--<td class="col-md-9">Cras justo odio</td>-->
+							<!--</tr>-->
+							<!--<tr>-->
+								<!--<td class="col-md-1"></span></td>-->
+								<!--<td class="col-md-2">0/4</td>-->
+								<!--<td class="col-md-9">Morbi leo risus</td>-->
+							<!--</tr>-->
+							<!--<tr>-->
+								<!--<td class="col-md-1"></span></td>-->
+								<!--<td class="col-md-2">3/4</td>-->
+								<!--<td class="col-md-9">Porta ac consectetur ac</td>-->
+							<!--</tr>-->
+						</tbody>
+					</table>
+				</div>
+				<p id="join-password-wrap" hidden>
+					<label for="join-password-input">Password</label> <br>
+					<input id="join-password-input" type="text"> <br>
+				</p>
+				<br>
+				<button id="join-btn">Join game</button>
+			</div>
+		</div>
+		<div id="game-nav">
+			<h3 id="game-name"></h3>
+
+			<div class="col-md-8" style="padding: 0">
+				<table id="players-list" class="table table-bordered">
+					<tbody>
+					<tr>
+						<td class="col-md-1">1</td>
+						<td id="player-name-0">Player 1</td>
+					</tr>
+					<tr>
+						<td class="col-md-1">2</td>
+						<td id="player-name-1"></td>
+					</tr>
+					<tr>
+						<td class="col-md-1">3</td>
+						<td id="player-name-2"></td>
+					</tr>
+					<tr>
+						<td class="col-md-1">4</td>
+						<td id="player-name-3"></td>
+					</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="clearfix"></div>
+			<h4>Logs</h4>
+			<div id="logs-div">
+				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
+				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
+				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
+				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
+				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
+				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+			</div>
+
+			<button id="start-btn">Start game</button>
+			<button id="leave-btn">Leave game</button>
+		</div>
+	</div>
+	<div id="rummi-tooltip"></div>
 </body>
 </html>
