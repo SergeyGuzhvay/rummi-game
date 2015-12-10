@@ -6,13 +6,13 @@ var config = {
     rackRows: 2,
     borderWidth: 3,
     colors: ['#000001', '#0000FE', '#FD0001', '#00FD01'],
-    turnTimer: 5
+    turnTimer: 3
 };
 
 var desk;
 
-//window.addEventListener('load', function () {
-var canvasInit = function () {
+window.addEventListener('load', function () {
+//var canvasInit = function () {
     var tooltip = document.getElementById('rummi-tooltip');
     var canvas = new fabric.Canvas('rummi-canvas', {
         backgroundColor: '#CACACB',
@@ -250,7 +250,7 @@ var canvasInit = function () {
         fill: config.colors[0]
     });
     extraTileBtn.text.left = (extraTileBtn.rect.getInnerWidth() - extraTileBtn.text.getWidth()) / 2 + 0.5;
-    extraTileBtn.text.top = (extraTileBtn.rect.getInnerHeight() - extraTileBtn.text.getHeight()) / 2 + 5.5;
+    //extraTileBtn.text.top = (extraTileBtn.rect.getInnerHeight() - extraTileBtn.text.getHeight()) / 2 + 5.5;
     extraTileBtn = new fabric.Group([extraTileBtn.rect, extraTileBtn.text], {
         top: rackRect.top + config.cellSize * 0.05,
         type: 'button',
@@ -451,6 +451,14 @@ var canvasInit = function () {
         //    fill: 'black',
         //    selectable: false
         //}),
+        tilesBankText:  new fabric.Text('0', {
+            fontSize: config.cellSize / 2.4,
+            fill: config.colors[0],
+            originX: 'center',
+            textAlign: 'center',
+            left: 0,
+            top: extraTileBtn.getInnerHeight() * 0.1
+        }),
         startTimer: function () {
             clearInterval(this.tInterval);
             var secondsAngle = 360 / config.turnTimer;
@@ -506,9 +514,12 @@ var canvasInit = function () {
                     break;
                 case 'tilesNumber':
                     this.players[values[0]].tilesNumber.text = String(values[1]);
-                    //rummi.sendTilesNumber();
+                    break;
+                case 'tilesBankNumber':
+                    this.tilesBankText.set('text', String(values));
                     break;
             }
+            canvas.renderAll();
         },
         drawPlayers: function (players) {
             players.forEach(function (player, i) {
@@ -694,13 +705,13 @@ var canvasInit = function () {
         getTileById: function (id) {
             for (var i in canvas._objects) {
                 var obj = canvas._objects[i];
-                if (obj.tileId === id)
+                if (obj.type === 'tile' && obj.tileId === id)
                     return obj;
             }
         },
         removeTile: function (id) {
-            var obj = this.getTileById(id);
-            canvas.remove(obj);
+            canvas.deactivateAll();
+            canvas.remove(this.getTileById(id));
             canvas.renderAll();
         },
         removeActives: function () {
@@ -763,6 +774,8 @@ var canvasInit = function () {
         }
     };
 
+    extraTileBtn.add(desk.tilesBankText);
+
     //desk.mText.text = 'test message';
     //desk.mText.set('fontSize', 14);
     //var mText = desk.mText.text;
@@ -781,16 +794,12 @@ var canvasInit = function () {
     canvas.renderAll();
 
     window.addEventListener('keydown', function (e) {
-        //if (e.keyCode === 83) desk.startTimer();
-        //if (e.keyCode === 83) canvas.getActiveObject();
-        //if (e.keyCode === 38) rummi.save();
-        //if (e.keyCode === 40) rummi.load();
-        //if (e.keyCode === 37) desk.clearDesk();
-        //if (e.keyCode === 39) desk.drawDesk(rummi[1]);
-        //if (e.keyCode === 32) {
-        //    desk.clearGameObjects();
-        //desk.removeActives();
-        //}
+        if (e.keyCode === 32) extraTileBtn.action();
+        if (e.keyCode === 37) console.log(canvas.getActiveObject());
+        if (e.keyCode === 38) console.log(rummi[2]);
+    //
+    //    desk.removeActives();
+    //    }
     });
-}
-//});
+//}
+});

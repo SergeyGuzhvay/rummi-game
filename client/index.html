@@ -1,121 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="lobby">
 <head>
 	<meta charset="UTF-8">
 	<title>Rummi game</title>
 	<script type="text/javascript" src="/socket.io/socket.io.js"></script>
-	<script type="text/javascript" src="js/fabric.min.js"></script>
+	<!--<script type="text/javascript" src="js/fabric.min.js"></script>-->
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.5.0/fabric.min.js"></script>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
 	<script type="text/javascript" src="js/jquery.min.js"></script>
-	<!--<script type="text/javascript" src="js/bootstrap.min.js"></script>-->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+	        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 	<script type="text/javascript" src="js/lobby-controller.js"></script>
 	<script type="text/javascript" src="js/rummi-canvas.js"></script>
 	<script type="text/javascript" src="js/rummi-controller.js"></script>
-	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
-	<style>
-		body {
-			margin: 8px;
-		}
-		canvas {
-			border: 1px solid black;
-		}
-		#rummi-tooltip {
-			background-color: black;
-			padding: 5px 10px;
-			color: white;
-			border-radius: 5px;
-			position: fixed;
-			display: none;
-		}
-		#rummi-canvas-wrap {
-			position: relative;
-			display: inline-block;
-			background: url('images/rummikub.png') no-repeat center;
-			background-size: 70%;
-		}
-		#rummi-controls {
-			padding: 10px;
-			display: inline-block;
-			border: 1px solid black;
-			width: 320px;
-			height: 602px;
-			margin-left: 10px;
-			vertical-align: top;
-		}
-		#rummi-controls label {
-			font-weight: normal;
-		}
-		#rummi-controls input {
-			padding-left: 5px;
-		}
-		#rummi-controls input[type="checkbox"] {
-			vertical-align: text-bottom;
-		}
-		#active-games {
-			height: 180px;
-			overflow: auto;
-			border: 1px solid gray;
-			cursor: default;
-		}
-		#logs-div {
-			height: 250px;
-			overflow: auto;
-			border: 1px solid gray;
-			cursor: default;
-			margin-bottom: 20px;
-		}
-		.logs-line {
-			padding: 3px;
-		}
-		.logs-line:nth-of-type(even) {
-			background-color: #efeff0;
-		}
-		/*#logs-div div:nth-of-type(odd) {*/
-			/*background-color: #e8e8e9;*/
-		/*}*/
-		/*#active-games div:last-of-type{*/
-			/*margin-bottom: -1px;*/
-		/*}*/
-		/*.active-game {*/
-			/*padding: 5px 0 5px 10px;*/
-			/*border-bottom: 1px solid black;*/
-		/*}*/
-		/*.active-game:not(.selected):hover {*/
-			/*background-color: #f3f3f4;*/
-		/*}*/
-		#active-games .active td {
-			background-color: #dcdcdd !important;
-		}
-		#create-div, #game-nav {
-			display: none;
-		}
-		#rummi-controls .btn-default:focus {
-			outline: 0 !important;
-		}
-		.tabs {
-			cursor: default;
-		}
-		.notValid {
-			border: 2px solid red;
-		}
-		/*#players-list*/
-		/*#lobby-div {*/
-			/*display: none;*/
-		/*}*/
-		/*#game-nav {*/
-			/*display: block;*/
-		/*}*/
-
-	</style>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+	      integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+	<link rel="stylesheet" type="text/css" href="css/styles.css" />
 </head>
-<body>
+<body ng-controller="LobbyController as l">
+	<div id="rummi-tooltip"></div>
 	<div id="rummi-canvas-wrap">
-		<canvas id="rummi-canvas" width="900" height="600"></canvas>
+		<div ng-show="l.gameStarted">
+			<canvas id="rummi-canvas" width="900" height="600"></canvas>
+		</div>
 	</div>
 	<div id="rummi-controls">
-		<div id="lobby-div">
+		<div id="lobby-div" ng-hide="l.room">
 			<p>
 				<label for="name-input">Your name</label> <br>
-				<input id="name-input" type="text">
+				<input id="name-input" type="text" ng-model="l.form.username">
 			</p>
 			<br>
 			<!--<p>-->
@@ -123,24 +36,28 @@
 				<!--<button id="join-tab" type="button" class="btn btn-default active">Join</button>-->
 			<!--</p>-->
 			<ul class="nav nav-tabs">
-				<li id="create-tab" class="tabs"><a>Create</a></li>
-				<li id="join-tab" class="tabs active"><a>Join</a></li>
+				<li class="tabs" ng-class="{active: l.isSelected('create')}">
+					<a ng-click="l.selectTab('create')">Create</a>
+				</li>
+				<li class="tabs" ng-class="{active: l.isSelected('join')}">
+					<a ng-click="l.selectTab('join')">Join</a>
+				</li>
 			</ul>
 			<br>
-			<div id="create-div">
+			<div id="create-div" ng-show="l.isSelected('create')">
 				<p>
 					<label for="game-name-input">Game name</label> <br>
-					<input id="game-name-input" type="text"> <br>
-					<input id="private-checkbox" type="checkbox"> <label for="private-checkbox">private</label>
+					<input id="game-name-input" type="text" ng-model="l.form.name"> <br>
+					<input id="private-checkbox" type="checkbox" ng-model="l.form.isPrivate"> <label for="private-checkbox">private</label>
 				</p>
-				<p id="create-password-wrap" hidden>
+				<p id="create-password-wrap" ng-show="l.form.isPrivate">
 					<label for="create-password-input">Password</label> <br>
-					<input id="create-password-input" type="text"> <br>
+					<input id="create-password-input" type="text" ng-model="l.form.password"> <br>
 				</p>
-				<button id="create-btn">Create game</button>
+				<button ng-click="l.createRoom()">Create game</button>
 			</div>
-			<div id="join-div">
-				Games
+			<div id="join-div" ng-show="l.isSelected('join')">
+				Active rooms
 				<!--<div id="active-games">-->
 					<!--<div class="active-game">Dapibus ac facidivsis in</div>-->
 					<!--<div class="active-game">Cras justo odio</div>-->
@@ -163,11 +80,21 @@
 							<!--</tr>-->
 						<!--</thead>-->
 						<tbody id="games-list">
-							<!--<tr class="game-info">-->
-								<!--<td class="col-md-1"><span class="glyphicon glyphicon-lock"></span></td>-->
-								<!--<td class="col-md-2">1/4</td>-->
-								<!--<td class="col-md-9">Dapibus ac facidivsis in</td>-->
-							<!--</tr>-->
+							<tr class="game-info"
+							    ng-repeat="room in l.rooms"
+							    ng-click="l.selectedRoom = room"
+							    ng-dblclick="l.joinRoom(room.id)"
+							    ng-class="{active: l.selectedRoom.id === room.id}">
+								<td class="col-md-1">
+									<span class="glyphicon glyphicon-lock" ng-show="room.password"></span>
+								</td>
+								<td class="col-md-2">
+									{{room.players}}/4
+								</td>
+								<td class="col-md-9">
+									{{room.name}}
+								</td>
+							</tr>
 							<!--<tr class="game-info">-->
 								<!--<td class="col-md-1"></span></td>-->
 								<!--<td class="col-md-2">3/4</td>-->
@@ -186,35 +113,35 @@
 						</tbody>
 					</table>
 				</div>
-				<p id="join-password-wrap" hidden>
+				<p id="join-password-wrap" ng-show="l.selectedRoom.password">
 					<label for="join-password-input">Password</label> <br>
-					<input id="join-password-input" type="text"> <br>
+					<input id="join-password-input" type="text" ng-model="l.form.password"> <br>
 				</p>
 				<br>
-				<button id="join-btn">Join game</button>
+				<button ng-click="l.joinRoom()">Join game</button>
 			</div>
 		</div>
-		<div id="game-nav">
-			<h3 id="game-name"></h3>
+		<div id="game-nav" ng-show="l.room">
+			<h3 id="game-name">{{l.room.name}}</h3>
 
 			<div class="col-md-8" style="padding: 0">
 				<table id="players-list" class="table table-bordered">
 					<tbody>
 					<tr>
 						<td class="col-md-1">1</td>
-						<td id="player-name-0">Player 1</td>
+						<td id="player-name-0">{{l.room.players[0].name}}</td>
 					</tr>
 					<tr>
 						<td class="col-md-1">2</td>
-						<td id="player-name-1"></td>
+						<td id="player-name-1">{{l.room.players[1].name}}</td>
 					</tr>
 					<tr>
 						<td class="col-md-1">3</td>
-						<td id="player-name-2"></td>
+						<td id="player-name-2">{{l.room.players[2].name}}</td>
 					</tr>
 					<tr>
 						<td class="col-md-1">4</td>
-						<td id="player-name-3"></td>
+						<td id="player-name-3">{{l.room.players[3].name}}</td>
 					</tr>
 					</tbody>
 				</table>
@@ -222,7 +149,7 @@
 			<div class="clearfix"></div>
 			<h4>Logs</h4>
 			<div id="logs-div">
-				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
+				<div class="logs-line" ng-repeat="log in l.logs"><span ng-bind-html="log"></span></div>
 				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
 				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
 				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
@@ -231,12 +158,45 @@
 				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
 				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
 				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
+
 			</div>
 
-			<button id="start-btn">Start game</button>
-			<button id="leave-btn">Leave game</button>
+			<button ng-click="l.startGame()">Start game</button>
+			<button ng-click="l.stopGame()">Stop game</button>
+			<button ng-click="l.leaveRoom()">Leave room</button>
 		</div>
 	</div>
-	<div id="rummi-tooltip"></div>
+
+	<!--<div ng-controller="ModalDemoCtrl">-->
+		<!--<script type="text/ng-template" id="myModalContent.html">-->
+			<!--<div class="modal-header">-->
+				<!--<h3 class="modal-title">I'm a modal!</h3>-->
+			<!--</div>-->
+			<!--<div class="modal-body">-->
+				<!--<ul>-->
+					<!--<li ng-repeat="item in items">-->
+						<!--<a href="#" ng-click="$event.preventDefault(); selected.item = item">{{ item }}</a>-->
+					<!--</li>-->
+				<!--</ul>-->
+				<!--Selected: <b>{{ selected.item }}</b>-->
+			<!--</div>-->
+			<!--<div class="modal-footer">-->
+				<!--<button class="btn btn-primary" type="button" ng-click="ok()">OK</button>-->
+				<!--<button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>-->
+			<!--</div>-->
+		<!--</script>-->
+
+		<!--<button type="button" class="btn btn-default" ng-click="open()">Open me!</button>-->
+		<!--<button type="button" class="btn btn-default" ng-click="open('lg')">Large modal</button>-->
+		<!--<button type="button" class="btn btn-default" ng-click="open('sm')">Small modal</button>-->
+		<!--<button type="button" class="btn btn-default" ng-click="toggleAnimation()">Toggle Animation ({{ animationsEnabled }})</button>-->
+		<!--<div ng-show="selected">Selection from a modal: {{ selected }}</div>-->
+	<!--</div>-->
 </body>
 </html>

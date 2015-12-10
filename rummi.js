@@ -38,7 +38,7 @@ module.exports = function () {
         }
     };
     this.dealtTiles = function () {
-        return this.tilesBank.splice(0, 14);
+        return this.tilesBank.splice(0, 26);
     };
     this.getExtraTile = function () {
         return this.tilesBank.splice(0, 1)[0];

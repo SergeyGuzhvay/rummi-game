@@ -1,15 +1,16 @@
 var rummi;
-window.addEventListener('load', function () {
-    socket.on('game started', function () {
-        canvasInit();
-        socket.emit('get data on start');
-    });
+//window.addEventListener('load', function () {
+var rummiInit = function () {
     socket.on('start data', function (tiles) {
-        rummi.playerTiles = tiles;
+        rummi.index = lobby.room.index;
+        rummi.players = lobby.room.players;
+        rummi.player = rummi.players[rummi.index];
 
+        rummi.playerTiles = tiles;
         rummi.updateRack();
         desk.drawRack(rummi[2]);
         desk.drawPlayers(rummi.players);
+        rummi.updateTilesBankNumber();
         //rummi.startTurn();
     });
     socket.on('extra tile', function (newTile) {
@@ -20,6 +21,9 @@ window.addEventListener('load', function () {
     });
     socket.on('new tiles number', function (data) {
         desk.set('tilesNumber', [data.index, data.tilesNumber]);
+    });
+    socket.on('new tiles bank number', function (bankNumber) {
+        desk.set('tilesBankNumber', bankNumber);
     });
     socket.on('start turn', function (playerTurn) {
         rummi.playerTurn = playerTurn;
@@ -37,17 +41,19 @@ window.addEventListener('load', function () {
         }
     });
     socket.on('game over', function (index) {
+        lobby.stopGame();
         alert(rummi.players[index].name + ' has won!');
-        rummi.index = null;
-        rummi.players = [];
-        rummi.player = {};
-        rummi.playerTiles = [];
-        rummi.history = [];
-        rummi[1] = {};
-        rummi[2] = {};
-        desk.clearGameObjects();
-        desk.clear();
+        //rummi.index = null;
+        //rummi.players = [];
+        //rummi.player = {};
+        //rummi.playerTiles = [];4
+        //rummi.history = [];
+        //rummi[1] = {};
+        //rummi[2] = {};
+        //desk.clearGameObjects();
+        //desk.clear();
     });
+
     //socket.on('saved data', function (savedData) {
     //     rummi[1] = savedData[1];
     //    rummi[2] = savedData[2];
@@ -108,12 +114,13 @@ window.addEventListener('load', function () {
         startTurn: function () {
             desk.startTimer();
             desk.lockDeskTiles();
-            console.log('turn: ', this.index, this.playerTurn);
             if (this.isMyTurn()) {
                 this.save();
                 this.beep.play();
-                console.log('my turn: ', this.isMyTurn());
             }
+        },
+        updateTilesBankNumber: function () {
+            socket.emit('update tiles bank number');
         },
         getTilesNumber: function () {
             return Object.keys(this[2]).length;
@@ -210,7 +217,7 @@ window.addEventListener('load', function () {
                     if (cnt < 3) {
                         isValidGroup = false;
                     }
-                    
+
                     if (!isValidRun && !isValidGroup) {
                         isValid = false;
                         desk.showInvalidSet(set);
@@ -251,33 +258,62 @@ window.addEventListener('load', function () {
             socket.emit('move tile', tile);
         },
         getExtraTile: function (n) {
-            n = n ? n : 1;
+            n = n || 1;
+            var swapTile = 0;
+            var leftSlots = 28 - this.getTilesNumber();
+            //console.log(this.getTilesNumber());
             for (var i = 0; i < n; i++) {
-                socket.emit('get extra tile');
+                if (leftSlots <= 0) {
+                    this.updatePlayerTiles();
+                    swapTile = this.playerTiles.splice(Math.floor(Math.random() * (this.playerTiles.length - 1)), 1)[0];
+                    delete this[2][swapTile.id];
+                    desk.removeTile(swapTile.id);
+                    socket.emit('get extra tile', swapTile);
+                }
+                else {
+                    socket.emit('get extra tile', swapTile);
+                }
+                leftSlots--;
             }
+            this.updateTilesBankNumber();
+
+            //n = n || 1;
+            //var swapTile = 0;
+            //if (this.getTilesNumber() >= 28) {
+            //    for (var i = 0; i < n; i++) {
+            //        this.updatePlayerTiles();
+            //        swapTile = this.playerTiles.splice(Math.floor(Math.random() * (this.playerTiles.length - 1)), 1)[0];
+            //        delete this[2][swapTile.id];
+            //        desk.removeTile(swapTile.id);
+            //        socket.emit('get extra tile', swapTile);
+            //    }
+            //}
+            //else
+            //    for (var i = 0; i < n; i++) socket.emit('get extra tile', swapTile);
+            //this.updateTilesBankNumber();
         },
         addExtraTile: function (extraTile) {
             if (!extraTile) return;
             rowLoop:
-            for (var row = 0; row < config.rackRows; row++) {
-                colLoop:
-                for (var col = 0; col < config.rackCols; col++) {
-                    for (var id in this[2]) {
-                        var tile = this[2][id];
-                        if (tile.col === col && tile.row === row) {
-                            continue colLoop;
+                for (var row = 0; row < config.rackRows; row++) {
+                    colLoop:
+                        for (var col = 0; col < config.rackCols; col++) {
+                            for (var id in this[2]) {
+                                var tile = this[2][id];
+                                if (tile.col === col && tile.row === row) {
+                                    continue colLoop;
+                                }
+                            }
+                            extraTile.row = row;
+                            extraTile.col = col;
+                            extraTile.location = 2;
+                            this[2][extraTile.id] = extraTile;
+                            desk.set('tilesNumber', [rummi.index, rummi.getTilesNumber()]);
+                            rummi.sendTilesNumber();
+                            desk.drawTile(extraTile, {owner: rummi.index});
+                            return;
                         }
-                    }
-                    extraTile.row = row;
-                    extraTile.col = col;
-                    extraTile.location = 2;
-                    this[2][extraTile.id] = extraTile;
-                    desk.set('tilesNumber', [rummi.index, rummi.getTilesNumber()]);
-                    rummi.sendTilesNumber();
-                    desk.drawTile(extraTile, {owner: rummi.index});
-                    return;
                 }
-            }
         },
         addTileToDesk: function (tile) {
             desk.removeTile(tile.id);
@@ -311,10 +347,10 @@ window.addEventListener('load', function () {
             var playerTiles = [];
             for (var n in this[2]) {
                 var tile = this[2][n];
-                    if (tile) {
-                        test[tile.id] = true;
-                        playerTiles.push(tile);
-                    }
+                if (tile) {
+                    test[tile.id] = true;
+                    playerTiles.push(tile);
+                }
             }
             this.playerTiles = playerTiles;
         },
@@ -353,5 +389,15 @@ window.addEventListener('load', function () {
 
     //socket.emit('create');
     //socket.emit('start');
-
-});
+};
+//});
+var rummiRemove = function () {
+    socket.off('start data');
+    socket.off('extra tile');
+    socket.off('move tile');
+    socket.off('new tiles number');
+    socket.off('new tiles bank number');
+    socket.off('start turn');
+    socket.off('disconnected user');
+    socket.off('game over');
+};

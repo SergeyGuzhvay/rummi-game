@@ -1,136 +1,201 @@
 var socket = io();
 var lobby = {};
-window.addEventListener('load', function () {
-    socket.on('games list', function (list) {
-        list.forEach(function (game) {
-            lobby.addGame(game);
-        });
-    });
-    socket.on('add game', function (game) {
-        lobby.addGame(game);
-    });
-    socket.on('remove game', function (id) {
-        lobby.removeGame(id);
-        if (lobby.gameId == id)
-            lobby.leave();
-    });
-    socket.on('update list game', function (game) {
-        lobby.updateGame(game);
-    });
-    socket.on('update game', function (players) {
-        for (var i = 0; i < 4; i++ ) {
-            var name = players[i] ? players[i].name : '';
-            $('#player-name-' + i).html(name);
-        }
-        //players.forEach(function (player, i) {
-        //});
-        rummi.players = players;
-    });
-    socket.on('connected', function (data) {
-        $('#lobby-div').hide();
-        $('#game-nav').show();
-        $('#game-name').html(data.gameName);
-        //console.log(data.players);
-        for (var i = 0; i < 4; i++ ) {
-            var name = data.players[i] ? data.players[i].name : '';
-            $('#player-name-' + i).html(name);
-        }
+(function () {
+    angular.module('lobby', []).controller('LobbyController', function ($scope, $sce) {
+        lobby = this;
+        lobby.tab = 'join';
+        //lobby.inRoom = false;
+        lobby.selectedRoom = {};
+        lobby.logs = [];
+        lobby.rooms = {};
+        //    1: {
+        //        id: 1,
+        //        name: 'test 1',
+        //        password: '123',
+        //        players: 3
+        //    },
+        //    2: {
+        //        id: 2,
+        //        name: 'test 2',
+        //        password: '123',
+        //        players: 3
+        //    },
+        //    3: {
+        //        id: 3,
+        //        name: 'test 3',
+        //        password: '',
+        //        players: 1
+        //    }
+        //};
+        lobby.form = {};
 
-        rummi.index = data.index;
-        rummi.players = data.players;
-        rummi.player = rummi.players[rummi.index];
-        console.log('connected');
-    });
-    //socket.on('disconnected', function () {
-    //    console.log('disconnected');
-    //
-    //});
-
-    var buttons = ['create', 'join', 'start', 'leave'];
-    buttons.forEach(function (btn) {
-        $('#' + btn + '-btn').click(function () {
-            socket.emit(btn, lobby[btn]());
-        });
-    });
-
-    $('#games-list').on('click', '.game-info', function () {
-        $('.game-info').toggleClass('active', false);
-        $(this).toggleClass('active', true);
-        var private = $('#games-list .active').data('private');
-        console.log(private);
-        $('#join-password-wrap').toggle(private);
-        $('#join-password-input').val('');
-    });
-    $('#private-checkbox').on('change', function () {
-        $('#create-password-wrap').toggle($(this).is(':checked'));
-    });
-    $('.tabs').click(function (e) {
-        $('.tabs').toggleClass('active', false);
-        $(this).toggleClass('active', true);
-        $('#create-div').toggle($('#create-tab').hasClass('active'));
-        $('#join-div').toggle($('#join-tab').hasClass('active'));
-    });
-
-    lobby = {
-        create: function () {
-            //TODO: проверить сначала галочку "private" перед отсылкой пароля
-            return {
-                gameName: $('#game-name-input').val(),
-                password: $('#create-password-input').val(),
-                playerName: $('#name-input').val()
-            };
-        },
-        join: function () {
-            var playerName = $('#name-input');
-            var selectedGame = $('.game-info.active');
-            this.gameId = selectedGame.data('id');
-            var password = $('#join-password-input');
-            //playerName.toggleClass('notValid', !playerName.val());
-            //password.toggleClass('notValid', !password.val());
-            //if (selectedGame.data('private') && !password.val()) return;
-            //if (!playerName.val()) return;
-            return {
-                id: selectedGame.data('id'),
-                password: password.val(),
-                playerName: playerName.val()
-            };
-        },
-        leave: function () {
-            $('#lobby-div').show();
-            $('#game-nav').hide();
+        lobby.createRoom = function () {
+            //TODO: проверить заполнение форм
+            socket.emit('create', {
+                username: lobby.form.username,
+                name: lobby.form.name,
+                password: lobby.form.isPrivate ? lobby.form.password : ''
+            })
+        };
+        //l.selectRoom = function (id) {
+        //    l.selectedRoom
+        //};
+        lobby.joinRoom = function () {
+            socket.emit('join', {
+                username: lobby.form.username,
+                id: lobby.selectedRoom.id,
+                password: lobby.form.password
+            })
+        };
+        lobby.leaveRoom = function () {
+            delete lobby.room;
+            lobby.gameStarted = false;
+            rummiRemove();
             if (desk) {
                 desk.clearGameObjects();
-                desk.clear();
+            //    desk.clear();
             }
-        },
-        start: function () {
-            return 3;
-        },
-        addGame: function (game) {
-            var gamesList = $('#games-list');
-            var span = game.password ? $('<span></span>').addClass('glyphicon glyphicon-lock') : $('<span></span>');
-            var tr = $('<tr data-id="' + game.id + '" data-private="' + game.password + '"></tr>');
-            gamesList.append(
-                tr.addClass('game-info').append(
-                    $('<td></td>').addClass('col-md-1').append(span),
-                    $('<td></td>').addClass('col-md-2').html(game.playersNumber + '/4'),
-                    $('<td></td>').addClass('col-md-9').html(game.gameName)
-                )
+            socket.emit('leave');
+        };
+        lobby.startGame = function () {
+            //TODO: старт только для хоста
+            lobby.gameStarted = true;
+            socket.emit('start');
+        };
+        lobby.stopGame = function () {
+            lobby.gameStarted = false;
+            socket.emit('stop');
+        };
+        lobby.isSelected = function (tab) {
+            return lobby.tab === tab;
+        };
+        lobby.selectTab = function (tab) {
+            delete lobby.form.name;
+            delete lobby.form.password;
+            lobby.tab = tab;
+        };
+        lobby.addLog = function (log) {
+            var d = new Date();
+            lobby.logs.push(
+                $sce.trustAsHtml('[' + d.getTime() + '] ' + log)
             );
-        },
-        removeGame: function (id) {
-            $('.game-info[data-id="' + id + '"]').remove();
-        },
-        updateGame: function (game) {
-            $('.game-info[data-id="' + game.id + '"] td:nth-of-type(2)').html(game.playersNumber + '/4');
-        }
-    };
-    //setTimeout(function () {
+        };
+
+        socket.on('rooms list', function (rooms) {
+            lobby.rooms = rooms;
+            $scope.$apply();
+        });
+        socket.on('add room', function (room) {
+            lobby.rooms[room.id] = room;
+            $scope.$apply();
+        });
+        socket.on('remove room', function (id) {
+            if (lobby.room && lobby.room.id === id) {
+                lobby.leaveRoom();
+            }
+            delete lobby.rooms[id];
+            $scope.$apply();
+        });
+        socket.on('connected', function (room) {
+            lobby.room = room;
+            lobby.logs = [];
+            //lobby.inRoom = true;
+            $scope.$apply();
+        });
+        socket.on('update list room', function (room) {
+            lobby.rooms[room.id].players = room.players;
+            $scope.$apply();
+        });
+        socket.on('update room', function (players) {
+            lobby.room.players = players;
+            $scope.$apply();
+        });
+        socket.on('add log', function (log) {
+            lobby.addLog(log);
+            $scope.$apply();
+            var logsDiv = document.getElementById('logs-div');
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        });
+        socket.on('game started', function () {
+            lobby.gameStarted = true;
+            rummiInit();
+            socket.emit('get data on start');
+            $scope.$apply();
+        });
+        socket.on('game stopped', function () {
+            lobby.gameStarted = false;
+            rummiRemove();
+            if (desk) {
+                desk.clearGameObjects();
+            }
+            $scope.$apply();
+        });
+        socket.on('reconnect', function () {
+            //alert('SERVER RESTARTED');
+            location.reload(true);
+        });
+        //window.onkeydown = function (e) {
+        //    if (e.keyCode === 32) {
+        //        console.log(lobby.rooms);
+        //    }
+        //}
+    });
+
+
+    //angular.module('lobby', []).controller('ModalDemoCtrl', function ($scope, $uibModal, $log) {
     //
-    //}, 500);
-});
-//var nickname = prompt('Enter your name:');
-//socket.emit('nickname', nickname);
-//socket.on('number of players', function (number) {
-//    playersEl.innerHTML = number;
-//});
+    //    $scope.items = ['item1', 'item2', 'item3'];
+    //
+    //    $scope.animationsEnabled = true;
+    //
+    //    $scope.open = function (size) {
+    //
+    //        var modalInstance = $uibModal.open({
+    //            animation: $scope.animationsEnabled,
+    //            templateUrl: 'myModalContent.html',
+    //            controller: 'ModalInstanceCtrl',
+    //            size: size,
+    //            resolve: {
+    //                items: function () {
+    //                    return $scope.items;
+    //                }
+    //            }
+    //        });
+    //
+    //        modalInstance.result.then(function (selectedItem) {
+    //            $scope.selected = selectedItem;
+    //        }, function () {
+    //            $log.info('Modal dismissed at: ' + new Date());
+    //        });
+    //    };
+    //
+    //    $scope.toggleAnimation = function () {
+    //        $scope.animationsEnabled = !$scope.animationsEnabled;
+    //    };
+    //
+    //});
+    //
+    //angular.module('lobby', []).controller('ModalInstanceCtrl', function ($scope, $uibModalInstance, items) {
+    //
+    //    $scope.items = items;
+    //    $scope.selected = {
+    //        item: $scope.items[0]
+    //    };
+    //
+    //    $scope.ok = function () {
+    //        $uibModalInstance.close($scope.selected.item);
+    //    };
+    //
+    //    $scope.cancel = function () {
+    //        $uibModalInstance.dismiss('cancel');
+    //    };
+    //});
+})();
+Date.prototype.getTime = function () {
+    var t = {
+        h: this.getHours() < 10 ? '0' + this.getHours() : this.getHours(),
+        m: this.getMinutes() < 10 ? '0' + this.getMinutes() : this.getMinutes(),
+        s: this.getSeconds() < 10 ? '0' + this.getSeconds() : this.getSeconds()
+    };
+    return t.h + ':' + t.m + ':' + t.s;
+};
