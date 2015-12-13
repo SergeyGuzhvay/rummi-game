@@ -3,9 +3,6 @@ module.exports = function () {
         this.id = id;
         this.color = color;
         this.number = number;
-        //this.location = '';
-        //this.row = 0;
-        //this.col = 0;
     };
     this.tilesBank = [];
     this.createTilesBank = function () {
@@ -38,7 +35,7 @@ module.exports = function () {
         }
     };
     this.dealtTiles = function () {
-        return this.tilesBank.splice(0, 26);
+        return this.tilesBank.splice(0, 14);
     };
     this.getExtraTile = function () {
         return this.tilesBank.splice(0, 1)[0];

@@ -6,7 +6,7 @@ var config = {
     rackRows: 2,
     borderWidth: 3,
     colors: ['#000001', '#0000FE', '#FD0001', '#00FD01'],
-    turnTimer: 3
+    turnTimer: 60
 };
 
 var desk;
@@ -404,20 +404,6 @@ window.addEventListener('load', function () {
         'object:moving': function (e) {
             var target = e.target;
             target.setCoords();
-            //if (!el.isContainedWithinObject(deskRect) && el.owner) {
-            //    el.set({
-            //        top: el.getTop(),
-            //        left: el.getLeft()
-            //    });
-            //}
-            if (target.isContainedWithinObject(deskRect)) {
-                canvas.forEachObject(function (obj) {
-                    if (target === obj) return;
-                    if (target.intersectsWithObject(obj) && obj.type === 'tile') {
-                        //console.log(rummi.getRowByTileId(obj.tileId));
-                    }
-                })
-            }
             if (target.isContainedWithinObject(deskRect)) {
                 target.set({
                     left: Math.round((target.left - (deskRect.getInnerLeft() + 3.5)) / config.cellSize) * config.cellSize + deskRect.getInnerLeft() + 3.5,
@@ -793,13 +779,13 @@ window.addEventListener('load', function () {
     //canvas.add(desk.mText);
     canvas.renderAll();
 
-    window.addEventListener('keydown', function (e) {
-        if (e.keyCode === 32) extraTileBtn.action();
-        if (e.keyCode === 37) console.log(canvas.getActiveObject());
-        if (e.keyCode === 38) console.log(rummi[2]);
+    //window.addEventListener('keydown', function (e) {
+    //    if (e.keyCode === 32) extraTileBtn.action();
+    //    if (e.keyCode === 37) console.log(canvas.getActiveObject());
+    //    if (e.keyCode === 38) console.log(rummi[2]);
     //
     //    desk.removeActives();
     //    }
-    });
+    //});
 //}
 });

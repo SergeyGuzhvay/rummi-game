@@ -4,10 +4,9 @@
 	<meta charset="UTF-8">
 	<title>Rummi game</title>
 	<script type="text/javascript" src="/socket.io/socket.io.js"></script>
-	<!--<script type="text/javascript" src="js/fabric.min.js"></script>-->
 	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.5.0/fabric.min.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
-	<script type="text/javascript" src="js/jquery.min.js"></script>
+	<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
 	        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 	<script type="text/javascript" src="js/lobby-controller.js"></script>
@@ -31,10 +30,6 @@
 				<input id="name-input" type="text" ng-model="l.form.username">
 			</p>
 			<br>
-			<!--<p>-->
-				<!--<button id="create-tab" type="button" class="btn btn-default">Create</button>-->
-				<!--<button id="join-tab" type="button" class="btn btn-default active">Join</button>-->
-			<!--</p>-->
 			<ul class="nav nav-tabs">
 				<li class="tabs" ng-class="{active: l.isSelected('create')}">
 					<a ng-click="l.selectTab('create')">Create</a>
@@ -58,27 +53,8 @@
 			</div>
 			<div id="join-div" ng-show="l.isSelected('join')">
 				Active rooms
-				<!--<div id="active-games">-->
-					<!--<div class="active-game">Dapibus ac facidivsis in</div>-->
-					<!--<div class="active-game">Cras justo odio</div>-->
-					<!--<div class="active-game">Morbi leo risus</div>-->
-					<!--<div class="active-game">Porta ac consectetur ac</div>-->
-					<!--<div class="active-game">Vestibulum at eros</div>-->
-					<!--<div class="active-game">Dapibus ac facidivsis in</div>-->
-					<!--<div class="active-game">Cras justo odio</div>-->
-					<!--<div class="active-game">Morbi leo risus</div>-->
-					<!--<div class="active-game">Porta ac consectetur ac</div>-->
-					<!--<div class="active-game">Vestibulum at eros</div>-->
-				<!--</div>-->
 				<div id="active-games" >
 					<table class="table table-hover">
-						<!--<thead>-->
-							<!--<tr>-->
-								<!--<th>Players</th>-->
-								<!--<th>Name</th>-->
-								<!--<th>Private</th>-->
-							<!--</tr>-->
-						<!--</thead>-->
 						<tbody id="games-list">
 							<tr class="game-info"
 							    ng-repeat="room in l.rooms"
@@ -93,23 +69,9 @@
 								</td>
 								<td class="col-md-9">
 									{{room.name}}
+									<span style="color: red" ng-show="room.gameStarted">[started]</span>
 								</td>
 							</tr>
-							<!--<tr class="game-info">-->
-								<!--<td class="col-md-1"></span></td>-->
-								<!--<td class="col-md-2">3/4</td>-->
-								<!--<td class="col-md-9">Cras justo odio</td>-->
-							<!--</tr>-->
-							<!--<tr>-->
-								<!--<td class="col-md-1"></span></td>-->
-								<!--<td class="col-md-2">0/4</td>-->
-								<!--<td class="col-md-9">Morbi leo risus</td>-->
-							<!--</tr>-->
-							<!--<tr>-->
-								<!--<td class="col-md-1"></span></td>-->
-								<!--<td class="col-md-2">3/4</td>-->
-								<!--<td class="col-md-9">Porta ac consectetur ac</td>-->
-							<!--</tr>-->
 						</tbody>
 					</table>
 				</div>
@@ -150,21 +112,6 @@
 			<h4>Logs</h4>
 			<div id="logs-div">
 				<div class="logs-line" ng-repeat="log in l.logs"><span ng-bind-html="log"></span></div>
-				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
-				<!--<div class="logs-line">sdasdakjf sadofj saodf 32f </div>-->
-				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
-				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
-				<!--<div class="logs-line">asdfj 11 dsj9f </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-				<!--<div class="logs-line">asdf129d 1209hfd012had flas </div>-->
-
 			</div>
 
 			<button ng-click="l.startGame()">Start game</button>
@@ -173,30 +120,39 @@
 		</div>
 	</div>
 
-	<!--<div ng-controller="ModalDemoCtrl">-->
-		<!--<script type="text/ng-template" id="myModalContent.html">-->
-			<!--<div class="modal-header">-->
-				<!--<h3 class="modal-title">I'm a modal!</h3>-->
+	<!--<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">-->
+		<!--<div class="modal-dialog" role="document">-->
+			<!--<div class="modal-content">-->
+				<!--<div class="modal-header">-->
+					<!--<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>-->
+					<!--&lt;!&ndash;<h4 class="modal-title" id="myModalLabel">Modal title</h4>&ndash;&gt;-->
+				<!--</div>-->
+				<!--<div class="modal-body">-->
+					<!--{{l.alert}}-->
+				<!--</div>-->
+				<!--<div class="modal-footer">-->
+					<!--<button type="button" class="btn btn-default" data-dismiss="modal">OK</button>-->
+					<!--&lt;!&ndash;<button type="button" class="btn btn-primary">Save changes</button>&ndash;&gt;-->
+				<!--</div>-->
 			<!--</div>-->
-			<!--<div class="modal-body">-->
-				<!--<ul>-->
-					<!--<li ng-repeat="item in items">-->
-						<!--<a href="#" ng-click="$event.preventDefault(); selected.item = item">{{ item }}</a>-->
-					<!--</li>-->
-				<!--</ul>-->
-				<!--Selected: <b>{{ selected.item }}</b>-->
-			<!--</div>-->
-			<!--<div class="modal-footer">-->
-				<!--<button class="btn btn-primary" type="button" ng-click="ok()">OK</button>-->
-				<!--<button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>-->
-			<!--</div>-->
-		<!--</script>-->
-
-		<!--<button type="button" class="btn btn-default" ng-click="open()">Open me!</button>-->
-		<!--<button type="button" class="btn btn-default" ng-click="open('lg')">Large modal</button>-->
-		<!--<button type="button" class="btn btn-default" ng-click="open('sm')">Small modal</button>-->
-		<!--<button type="button" class="btn btn-default" ng-click="toggleAnimation()">Toggle Animation ({{ animationsEnabled }})</button>-->
-		<!--<div ng-show="selected">Selection from a modal: {{ selected }}</div>-->
+		<!--</div>-->
 	<!--</div>-->
+
+	<div id="myModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel">
+		<div class="modal-dialog modal-sm">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="myModalLabel">{{l.alert}}</h4>
+				</div>
+				<div class="modal-body">
+				</div>
+				<!--<div class="modal-footer">-->
+				<!--<button type="button" class="btn btn-default" data-dismiss="modal">OK</button>-->
+				<!--&lt;!&ndash;<button type="button" class="btn btn-primary">Save changes</button>&ndash;&gt;-->
+				<!--</div>-->
+			</div>
+		</div>
+	</div>
 </body>
 </html>

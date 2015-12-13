@@ -4,29 +4,9 @@ var lobby = {};
     angular.module('lobby', []).controller('LobbyController', function ($scope, $sce) {
         lobby = this;
         lobby.tab = 'join';
-        //lobby.inRoom = false;
         lobby.selectedRoom = {};
         lobby.logs = [];
         lobby.rooms = {};
-        //    1: {
-        //        id: 1,
-        //        name: 'test 1',
-        //        password: '123',
-        //        players: 3
-        //    },
-        //    2: {
-        //        id: 2,
-        //        name: 'test 2',
-        //        password: '123',
-        //        players: 3
-        //    },
-        //    3: {
-        //        id: 3,
-        //        name: 'test 3',
-        //        password: '',
-        //        players: 1
-        //    }
-        //};
         lobby.form = {};
 
         lobby.createRoom = function () {
@@ -37,9 +17,6 @@ var lobby = {};
                 password: lobby.form.isPrivate ? lobby.form.password : ''
             })
         };
-        //l.selectRoom = function (id) {
-        //    l.selectedRoom
-        //};
         lobby.joinRoom = function () {
             socket.emit('join', {
                 username: lobby.form.username,
@@ -53,7 +30,6 @@ var lobby = {};
             rummiRemove();
             if (desk) {
                 desk.clearGameObjects();
-            //    desk.clear();
             }
             socket.emit('leave');
         };
@@ -99,11 +75,11 @@ var lobby = {};
         socket.on('connected', function (room) {
             lobby.room = room;
             lobby.logs = [];
-            //lobby.inRoom = true;
             $scope.$apply();
         });
         socket.on('update list room', function (room) {
             lobby.rooms[room.id].players = room.players;
+            lobby.rooms[room.id].gameStarted = room.gameStarted;
             $scope.$apply();
         });
         socket.on('update room', function (players) {
@@ -130,66 +106,25 @@ var lobby = {};
             }
             $scope.$apply();
         });
+        socket.on('game over', function (index) {
+            lobby.stopGame();
+            //alert(rummi.players[index].name + ' has won!');
+        });
+        socket.on('alert', function (alert) {
+            lobby.alert = alert;
+            $scope.$apply();
+            $('#myModal').modal();
+        });
         socket.on('reconnect', function () {
             //alert('SERVER RESTARTED');
             location.reload(true);
         });
         //window.onkeydown = function (e) {
         //    if (e.keyCode === 32) {
-        //        console.log(lobby.rooms);
+        //        $('#myModal').modal();
         //    }
         //}
     });
-
-
-    //angular.module('lobby', []).controller('ModalDemoCtrl', function ($scope, $uibModal, $log) {
-    //
-    //    $scope.items = ['item1', 'item2', 'item3'];
-    //
-    //    $scope.animationsEnabled = true;
-    //
-    //    $scope.open = function (size) {
-    //
-    //        var modalInstance = $uibModal.open({
-    //            animation: $scope.animationsEnabled,
-    //            templateUrl: 'myModalContent.html',
-    //            controller: 'ModalInstanceCtrl',
-    //            size: size,
-    //            resolve: {
-    //                items: function () {
-    //                    return $scope.items;
-    //                }
-    //            }
-    //        });
-    //
-    //        modalInstance.result.then(function (selectedItem) {
-    //            $scope.selected = selectedItem;
-    //        }, function () {
-    //            $log.info('Modal dismissed at: ' + new Date());
-    //        });
-    //    };
-    //
-    //    $scope.toggleAnimation = function () {
-    //        $scope.animationsEnabled = !$scope.animationsEnabled;
-    //    };
-    //
-    //});
-    //
-    //angular.module('lobby', []).controller('ModalInstanceCtrl', function ($scope, $uibModalInstance, items) {
-    //
-    //    $scope.items = items;
-    //    $scope.selected = {
-    //        item: $scope.items[0]
-    //    };
-    //
-    //    $scope.ok = function () {
-    //        $uibModalInstance.close($scope.selected.item);
-    //    };
-    //
-    //    $scope.cancel = function () {
-    //        $uibModalInstance.dismiss('cancel');
-    //    };
-    //});
 })();
 Date.prototype.getTime = function () {
     var t = {
