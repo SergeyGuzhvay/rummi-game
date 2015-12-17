@@ -83,8 +83,10 @@ var lobby = {};
             $scope.$apply();
         });
         socket.on('update room', function (players) {
-            lobby.room.players = players;
-            $scope.$apply();
+            if (lobby.room) {
+                lobby.room.players = players;
+                $scope.$apply();
+            }
         });
         socket.on('add log', function (log) {
             lobby.addLog(log);
@@ -121,7 +123,7 @@ var lobby = {};
         });
         //window.onkeydown = function (e) {
         //    if (e.keyCode === 32) {
-        //        $('#myModal').modal();
+        //       $('#myModal').modal();
         //    }
         //}
     });

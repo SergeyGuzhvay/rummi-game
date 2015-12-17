@@ -7,6 +7,9 @@ var rummiInit = function () {
         //rummi.player = rummi.players[rummi.index];
         //rummi.playerTiles = tiles;
         rummi.index = data.playerIndex;
+        //for (var i in data.players) {
+        //    rummi.players.push(data.players[i]);
+        //}
         rummi.players = data.players;
         rummi.player = data.players[data.index];
         rummi.playerTiles = data.playerTiles;
@@ -33,14 +36,7 @@ var rummiInit = function () {
         desk.set('activePlayer', [playerTurn]);
     });
     socket.on('disconnected user', function (index) {
-        delete rummi.players[index];
-        var cnt = 0;
-        for (var n in rummi.players) {
-            if (rummi.players[n]) cnt++;
-        }
-        if (cnt < 2) {
-            socket.emit('winner');
-        }
+        desk.markDisconnected(index);
     });
 
     rummi = {

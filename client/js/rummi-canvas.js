@@ -144,10 +144,10 @@ window.addEventListener('load', function () {
         ));
     }
 
-    var marginToprack = ((canvas.height - (deskRect.top + deskRect.height)) - config.rackRows * config.cellSize) / 2;
+    var marginTopRack = ((canvas.height - (deskRect.top + deskRect.height)) - config.rackRows * config.cellSize) / 2;
     // rack
     var rackRect = new fabric.Rect({
-        top: deskRect.top + deskRect.height + marginToprack,
+        top: deskRect.top + deskRect.height + marginTopRack,
         width: config.rackCols * config.cellSize,
         height: config.rackRows * config.cellSize,
         fill: '#B4B4B5',
@@ -233,7 +233,6 @@ window.addEventListener('load', function () {
     ];
     sortByNumberBtn.top = sortByColorBtn.getTop() + sortByColorBtn.getFullHeight() + config.cellSize * 0.1;
 
-    //TODO: сделать клон кнопки
     var extraTileBtn = {};
     extraTileBtn.rect = new fabric.Rect({
         width: config.cellSize,
@@ -298,7 +297,7 @@ window.addEventListener('load', function () {
         desk.drawRack(rummi[2]);
     };
     extraTileBtn.action = function () {
-        if (!rummi.isMyTurn()) return;
+        if (!rummi.isMyTurn() || rummi.savedTilesNumber !== rummi.getTilesNumber()) return;
         rummi.load();
         rummi.getExtraTile();
         rummi.endTurn();
@@ -747,7 +746,7 @@ window.addEventListener('load', function () {
         clearGameObjects: function () {
             desk.stopTimer();
             canvas.forEachObject(function (obj) {
-                if (obj.type === 'tile' || obj.type === 'player') {
+                if (obj.type === 'tile' || obj.type === 'player' || obj.type === 'red cross') {
                     canvas.remove(obj);
                 }
             });
@@ -757,6 +756,42 @@ window.addEventListener('load', function () {
             canvas.dispose();
             canvas.clear();
             canvas.clearContext(canvas.getContext());
+        },
+        markDisconnected: function (i) {
+            var avatar = this.players[i].avatar;
+            var line1 = new fabric.Line(
+                [
+                    avatar.left,
+                    avatar.top,
+                    avatar.left + avatar.getInnerWidth(),
+                    avatar.top + avatar.getInnerHeight()
+                ],
+                {
+                    left: avatar.left - avatar.getFullWidth() / 2,
+                    top: avatar.top - avatar.getFullHeight() / 2,
+                    stroke: 'red',
+                    strokeWidth: 4,
+                    type: 'red cross'
+                }
+            );
+            var line2 = new fabric.Line(
+                [
+                    avatar.left + avatar.getInnerWidth(),
+                    avatar.top,
+                    avatar.left,
+                    avatar.top + avatar.getInnerHeight(),
+                ],
+                {
+                    left: avatar.left - avatar.getFullWidth() / 2,
+                    top: avatar.top - avatar.getFullHeight() / 2,
+                    stroke: 'red',
+                    strokeWidth: 4,
+                    type: 'red cross'
+                }
+            );
+            canvas.add(line1, line2);
+            this.players[i].tilesNumber.text = '0';
+            canvas.renderAll();
         }
     };
 
@@ -780,12 +815,8 @@ window.addEventListener('load', function () {
     canvas.renderAll();
 
     //window.addEventListener('keydown', function (e) {
-    //    if (e.keyCode === 32) extraTileBtn.action();
-    //    if (e.keyCode === 37) console.log(canvas.getActiveObject());
-    //    if (e.keyCode === 38) console.log(rummi[2]);
+    //    if (e.keyCode === 32) console.log(rummi.players);
     //
-    //    desk.removeActives();
-    //    }
     //});
 //}
 });

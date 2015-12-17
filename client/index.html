@@ -18,12 +18,12 @@
 </head>
 <body ng-controller="LobbyController as l">
 	<div id="rummi-tooltip"></div>
-	<div id="rummi-canvas-wrap">
-		<div ng-show="l.gameStarted">
+	<div id="rummi-canvas-wrap" ng-show="l.gameStarted">
+		<div>
 			<canvas id="rummi-canvas" width="900" height="600"></canvas>
 		</div>
 	</div>
-	<div id="rummi-controls">
+	<div id="rummi-controls" style="margin: 0 auto;" ng-hide="l.gameStarted">
 		<div id="lobby-div" ng-hide="l.room">
 			<p>
 				<label for="name-input">Your name</label> <br>
@@ -53,7 +53,7 @@
 			</div>
 			<div id="join-div" ng-show="l.isSelected('join')">
 				Active rooms
-				<div id="active-games" >
+				<div id="active-games">
 					<table class="table table-hover">
 						<tbody id="games-list">
 							<tr class="game-info"
@@ -115,28 +115,10 @@
 			</div>
 
 			<button ng-click="l.startGame()">Start game</button>
-			<button ng-click="l.stopGame()">Stop game</button>
+			<!--<button ng-click="l.stopGame()">Stop game</button>-->
 			<button ng-click="l.leaveRoom()">Leave room</button>
 		</div>
 	</div>
-
-	<!--<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">-->
-		<!--<div class="modal-dialog" role="document">-->
-			<!--<div class="modal-content">-->
-				<!--<div class="modal-header">-->
-					<!--<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>-->
-					<!--&lt;!&ndash;<h4 class="modal-title" id="myModalLabel">Modal title</h4>&ndash;&gt;-->
-				<!--</div>-->
-				<!--<div class="modal-body">-->
-					<!--{{l.alert}}-->
-				<!--</div>-->
-				<!--<div class="modal-footer">-->
-					<!--<button type="button" class="btn btn-default" data-dismiss="modal">OK</button>-->
-					<!--&lt;!&ndash;<button type="button" class="btn btn-primary">Save changes</button>&ndash;&gt;-->
-				<!--</div>-->
-			<!--</div>-->
-		<!--</div>-->
-	<!--</div>-->
 
 	<div id="myModal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel">
 		<div class="modal-dialog modal-sm">
@@ -147,10 +129,6 @@
 				</div>
 				<div class="modal-body">
 				</div>
-				<!--<div class="modal-footer">-->
-				<!--<button type="button" class="btn btn-default" data-dismiss="modal">OK</button>-->
-				<!--&lt;!&ndash;<button type="button" class="btn btn-primary">Save changes</button>&ndash;&gt;-->
-				<!--</div>-->
 			</div>
 		</div>
 	</div>
