@@ -158,8 +158,6 @@ io.sockets.on('connection', function (client) {
                     client.gameOver();
                 }
             }
-            //client.updatePlayersInRoom();
-            //client.updateRoom(client.roomId);
         }
     };
     client.sendAlert = function (m, target) {
@@ -338,9 +336,6 @@ io.sockets.on('connection', function (client) {
     client.on('turn ended', function () {
         client.endTurn();
     });
-    //client.on('winner', function () {
-    //    return;
-    //});
     client.on('leave', function () {
         client.leaveRoom();
     });

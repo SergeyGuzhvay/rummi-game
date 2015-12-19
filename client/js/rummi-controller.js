@@ -45,6 +45,8 @@ var rummiInit = function () {
         index: null,
         playerTiles: [],
         history: [],
+        initialMove: true,
+        initialDesk: {},
         beep: new Audio('sounds/beep.mp3'),
         // desk array
         1: {},
@@ -81,17 +83,10 @@ var rummiInit = function () {
             }
             this.history[this.history.length - 1] = [];
             desk.removeInvalidSets();
+            if (this.initialMove) this.initialDesk = {};
         },
         isMyTurn: function () {
             return this.index === this.playerTurn;
-        },
-        startTurn: function () {
-            desk.startTimer();
-            desk.lockDeskTiles();
-            if (this.isMyTurn()) {
-                this.save();
-                this.beep.play();
-            }
         },
         updateTilesBankNumber: function () {
             socket.emit('update tiles bank number');
@@ -99,20 +94,44 @@ var rummiInit = function () {
         getTilesNumber: function () {
             return Object.keys(this[2]).length;
         },
+        startTurn: function () {
+            desk.startTimer();
+            desk.lockDeskTiles();
+            if (this.isMyTurn()) {
+                if (this.initialMove) this.initialDesk = {};
+                this.save();
+                this.beep.play();
+            }
+        },
         endTurn: function () {
             socket.emit('turn ended');
             if (this.getTilesNumber() === 0) {
                 socket.emit('winner');
             }
         },
-        checkDesk: function () {
+        checkInitialDesk: function () {
+            if (this.checkDesk(true)) {
+                var sum = 0;
+                for (var id in this.initialDesk) {
+                    var tile = this.initialDesk[id];
+                    sum += tile.number;
+                }
+                if (sum >= 30) {
+                    this.initialMove = false;
+                    return true;
+                }
+            }
+            return false;
+        },
+        checkDesk: function (initialMove) {
+            var mainDesk = initialMove ? this.initialDesk : this[1];
             var isValid = true;
             for (var r = 0; r < config.rows; r++) {
                 var row = [];
                 for (var c = 0; c < config.cols; c++) {
                     var item = 0;
-                    for (var id in this[1]) {
-                        var tile = this[1][id];
+                    for (var id in mainDesk) {
+                        var tile = mainDesk[id];
                         if (tile.row === r && tile.col === c) {
                             item = tile;
                         }
@@ -226,6 +245,14 @@ var rummiInit = function () {
             tile.row = row;
             tile.col = col;
             tile.location = location;
+            if (this.initialMove) {
+                if (this.initialDesk[id] || oldLocation === 2) {
+                    this.initialDesk[id] = tile;
+                }
+                if (oldLocation === 1 && location === 2) {
+                    delete this.initialDesk[id];
+                }
+            }
             desk.updateTile(tile);
             desk.set('tilesNumber', [rummi.index, rummi.getTilesNumber()]);
             rummi.sendTilesNumber();

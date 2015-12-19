@@ -310,6 +310,7 @@ window.addEventListener('load', function () {
     acceptDeskBtn.action = function () {
         if (!rummi.isMyTurn()) return;
         if (rummi.checkDesk() && rummi.savedTilesNumber !== rummi.getTilesNumber()) {
+            if (rummi.initialMove && !rummi.checkInitialDesk()) return;
             rummi.endTurn();
         }
     };
@@ -461,6 +462,10 @@ window.addEventListener('load', function () {
                     desk.removeActives();
                     if (rummi.checkDesk()) {
                         if (rummi.savedTilesNumber === rummi.getTilesNumber()) {
+                            rummi.getExtraTile(3);
+                        }
+                        else if (rummi.initialMove && !rummi.checkInitialDesk()) {
+                            rummi.load();
                             rummi.getExtraTile(3);
                         }
                     }
